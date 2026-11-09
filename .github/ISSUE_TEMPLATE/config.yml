@@ -5,4 +5,4 @@ contact_links:
     about: Do not open a public issue for a security problem.
   - name: Change the content of the site
     url: https://github.com/tamnd/programming/issues/new/choose
-    about: Pages, proofs, implementations and scenes are in tamnd/programming.
+    about: The text, the examples, the tasks and the scenes are in tamnd/programming.
