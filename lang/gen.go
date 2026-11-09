@@ -87,8 +87,10 @@ func (t Tree) Rewrite(s string) string {
 	if real, err := filepath.EvalSymlinks(t.Dir); err == nil && real != t.Dir {
 		dirs = append(dirs, real)
 	}
+	// A tool can print a path with a slash also on Windows, so both separators are cut.
 	for _, d := range dirs {
 		s = strings.ReplaceAll(s, d+string(filepath.Separator), "")
+		s = strings.ReplaceAll(s, filepath.ToSlash(d)+"/", "")
 	}
 	names := make([]string, 0, len(t.Sources))
 	for g := range t.Sources {

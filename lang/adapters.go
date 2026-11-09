@@ -409,8 +409,9 @@ func goAdapter(j *adapterJob) error {
 	if err := write(j.Dir, "algoadapter/main.go", b.String()); err != nil {
 		return err
 	}
-	j.Build = [][]string{{"go", "build", "-o", "algo_adapter", "./algoadapter"}}
-	j.Run = []string{"./algo_adapter"}
+	// The name ends in .exe, so that Windows runs the binary in host mode. Linux and macOS do not look at the extension.
+	j.Build = [][]string{{"go", "build", "-o", "algo_adapter.exe", "./algoadapter"}}
+	j.Run = []string{"./algo_adapter.exe"}
 	return nil
 }
 
@@ -662,8 +663,8 @@ func cAdapter(j *adapterJob) error {
 	}
 	args = append([]string{"cc", "-std=c2x"}, sanitize...)
 	args = append(append(args, "algo_adapter.c", "algo_json.c"), files(j.Impl, false, ".c")...)
-	j.Build = [][]string{append(args, "-o", "algo_adapter")}
-	j.Run = []string{"./algo_adapter"}
+	j.Build = [][]string{append(args, "-o", "algo_adapter.exe")}
+	j.Run = []string{"./algo_adapter.exe"}
 	return nil
 }
 
@@ -775,8 +776,8 @@ func cppAdapter(j *adapterJob) error {
 	}
 	args := append([]string{"c++", "-std=c++23"}, sanitize...)
 	args = append(append(args, "algo_adapter.cpp"), files(j.Impl, false, ".cpp", ".cc")...)
-	j.Build = [][]string{append(args, "-o", "algo_adapter")}
-	j.Run = []string{"./algo_adapter"}
+	j.Build = [][]string{append(args, "-o", "algo_adapter.exe")}
+	j.Run = []string{"./algo_adapter.exe"}
 	return nil
 }
 
