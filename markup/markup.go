@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"html"
 	"regexp"
+	"slices"
 	"strings"
 
 	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
@@ -206,6 +207,10 @@ func (r *codeRenderer) render(w util.BufWriter, src []byte, n ast.Node, entering
 	}
 	b := n.(*ast.FencedCodeBlock)
 	lang := string(b.Language(src))
+	info := ""
+	if b.Info != nil {
+		info = string(b.Info.Segment.Value(src))
+	}
 	var code strings.Builder
 	for i := 0; i < b.Lines().Len(); i++ {
 		seg := b.Lines().At(i)
@@ -217,10 +222,28 @@ func (r *codeRenderer) render(w util.BufWriter, src []byte, n ast.Node, entering
 		r.res.LineIDs = append(r.res.LineIDs, ids...)
 	case "math":
 		r.formula(w, strings.TrimSpace(code.String()), true)
+	case "output":
+		// The output of a run block (spec 07.2). It is plain text, so it has no highlight.
+		label, cls := "Output", "output"
+		if hasWord(info, "stream=stderr") {
+			label, cls = "Error output", "output stderr"
+		}
+		fmt.Fprintf(w, "<figure class=\"%s\"><figcaption>%s</figcaption><pre><code>%s</code></pre></figure>\n", cls, label, html.EscapeString(code.String()))
 	default:
+		switch {
+		case hasWord(info, "fails"):
+			_, _ = w.WriteString("<p class=\"code-note fails\">This code fails on purpose. The output below is the error.</p>\n")
+		case hasWord(info, "wrong"):
+			_, _ = w.WriteString("<p class=\"code-note wrong\">This code runs but gives a wrong answer on purpose.</p>\n")
+		}
 		_, _ = w.WriteString(Highlight(code.String(), lang))
 	}
 	return ast.WalkSkipChildren, nil
+}
+
+// hasWord tells if the info string of a fenced block has a word, such as run or stream=stderr (spec 07.2).
+func hasWord(info, w string) bool {
+	return slices.Contains(strings.Fields(info), w)
 }
 
 var pseudoLine = regexp.MustCompile(`^(L\d+)( +)(.*)$`)

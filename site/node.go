@@ -32,6 +32,10 @@ type NodePage struct {
 	Related  []Link
 	Solvers  []SolverRow
 	Impls    []ImplView
+	Examples []ExampleView
+	Facts    []FactRow
+	Guide    []Tile
+	Owned    []Link
 	Proofs   []ProofView
 	Lean     *LeanView
 	Player   *PlayerView
@@ -110,6 +114,17 @@ type ImplView struct {
 	GitHub   string
 	Markers  template.JS
 	Selected bool
+}
+
+// ExampleView is the example file of one language, shown as a tab (spec 04.4 and 07.2).
+type ExampleView struct {
+	Lang     string
+	Name     string
+	ID       string // the id of the panel, code-<lang>, or example-<lang> when an implementation uses code-<lang>
+	HTML     template.HTML
+	GitHub   string
+	Selected bool
+	tier     int
 }
 
 // FileView is one more file of an implementation.
@@ -304,6 +319,17 @@ func (b *builder) nodePage(n *node.Node) (*NodePage, error) {
 			html = insertBefore(html, b.snippet("formal-section", p), "history", "exercises", "references")
 		}
 	}
+	p.Examples = b.exampleViews(n)
+	if len(p.Examples) > 0 {
+		html = insertAfterSection(html, b.snippet("examples-body", p), firstH2(html, exampleSections...), "pitfalls", "variations", "references")
+	}
+	if n.Kind == "language" {
+		p.Guide = b.guideTiles(n)
+		p.Owned = b.ownedLinks(n.Slug)
+		if len(p.Guide) > 0 || len(p.Owned) > 0 {
+			html = insertAfterSection(html, b.snippet("guide-body", p), "the-guide", "versions-and-support", "references")
+		}
+	}
 	if len(p.Impls) > 0 {
 		if hasH2(html, "implementations") {
 			html = insertAfterSection(html, b.snippet("code-body", p), "implementations")
@@ -325,10 +351,84 @@ func (b *builder) nodePage(n *node.Node) (*NodePage, error) {
 	p.Body = template.HTML(html)
 	p.TOC = toc(html)
 	p.Card = b.card(n, p)
+	if p.Card == nil {
+		p.Facts = b.facts(n)
+	}
 	p.Rungs = rungs(p.Status)
 	p.Tests = testLine(p)
 	p.JSONLD = jsonLD(b, n)
 	return p, nil
+}
+
+// exampleSections are the sections that take the example tabs, in order of preference (spec 06.3).
+var exampleSections = []string{"examples", "example", "in-languages", "solutions", "how-it-works", "semantics"}
+
+// firstH2 returns the first id that the page has as an h2, or the empty string.
+func firstH2(html string, ids ...string) string {
+	for _, id := range ids {
+		if hasH2(html, id) {
+			return id
+		}
+	}
+	return ""
+}
+
+// exampleViews gives one tab for each file of examples/, in the order of the language tiers.
+func (b *builder) exampleViews(n *node.Node) []ExampleView {
+	var out []ExampleView
+	for _, ex := range n.Examples {
+		v := ExampleView{Lang: ex.Lang, Name: ex.Lang, ID: "code-" + ex.Lang, tier: 9}
+		if l := b.c.LangByID[ex.Lang]; l != nil {
+			v.Name, v.tier = l.Name, l.Tier
+		}
+		if n.Lang(ex.Lang) != nil {
+			v.ID = "example-" + ex.Lang
+		}
+		v.HTML = template.HTML(b.render(ex.Body).HTML)
+		v.GitHub = fmt.Sprintf("%s/blob/main/%s", b.opt.Repo, ex.Path)
+		out = append(out, v)
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].tier != out[j].tier {
+			return out[i].tier < out[j].tier
+		}
+		return b.langIndex(out[i].Lang) < b.langIndex(out[j].Lang)
+	})
+	if len(out) > 0 {
+		out[0].Selected = true
+	}
+	return out
+}
+
+// guideTiles are the parts of the guide of a language: the sub-areas of languages/<lang> (spec 05.3).
+func (b *builder) guideTiles(n *node.Node) []Tile {
+	a := b.c.AreaByID["languages/"+n.Slug]
+	if a == nil {
+		return nil
+	}
+	hue := b.hueOf("languages")
+	var out []Tile
+	for _, s := range a.Children {
+		k := len(b.c.InArea(s.Path()))
+		out = append(out, Tile{Name: s.Name, URL: s.URL(), Summary: s.Summary, Hue: hue, Count: k, Unit: "page", Missing: k == 0})
+	}
+	return out
+}
+
+// ownedLinks lists the nodes that a language, a tool or a library owns, such as python/match-statement.
+func (b *builder) ownedLinks(owner string) []Link {
+	var ns []*node.Node
+	for _, m := range b.c.Nodes {
+		if m.Owner == owner && m.Slug != owner {
+			ns = append(ns, m)
+		}
+	}
+	sortNodes(ns)
+	out := make([]Link, 0, len(ns))
+	for _, m := range ns {
+		out = append(out, b.link(m.Slug))
+	}
+	return out
 }
 
 func testLine(p *NodePage) string {
@@ -678,7 +778,7 @@ func jsonLD(b *builder, n *node.Node) template.JS {
 		"url":         b.opt.BaseURL + "/" + n.Slug + "/",
 		"identifier":  "al://" + n.Tag,
 		"license":     "https://creativecommons.org/licenses/by-sa/4.0/",
-		"isPartOf":    map[string]string{"@type": "WebSite", "name": "Algorithm", "url": b.opt.BaseURL + "/"},
+		"isPartOf":    map[string]string{"@type": "WebSite", "name": "Programming", "url": b.opt.BaseURL + "/"},
 	}
 	if len(n.Aliases) > 0 {
 		m["alternateName"] = n.Aliases

@@ -264,14 +264,9 @@ var funcs = template.FuncMap{
 		bs, err := json.Marshal(v)
 		return template.JS(bs), err
 	},
-	"plural": func(n int, one, many string) string {
-		if n == 1 {
-			return fmt.Sprintf("%d %s", n, one)
-		}
-		return fmt.Sprintf("%s %s", comma(n), many)
-	},
-	"comma": comma,
-	"join":  strings.Join,
+	"plural": plural,
+	"comma":  comma,
+	"join":   strings.Join,
 	"title": func(s string) string {
 		if s == "" {
 			return s
@@ -286,6 +281,13 @@ var funcs = template.FuncMap{
 		}
 		return a * 100 / b
 	},
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return fmt.Sprintf("%d %s", n, one)
+	}
+	return fmt.Sprintf("%s %s", comma(n), many)
 }
 
 func comma(n int) string {

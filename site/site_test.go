@@ -86,3 +86,39 @@ func TestBuildReplacesOutput(t *testing.T) {
 		t.Error("the build left its work directory")
 	}
 }
+
+func TestKindPages(t *testing.T) {
+	out := buildTest(t)
+	read := func(p string) string {
+		t.Helper()
+		b, err := os.ReadFile(filepath.Join(out, p))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	checks := map[string][]string{
+		// A concept shows its example files as tabs, and the features that realize it.
+		"closures/index.html": {`class="code examples"`, `id="code-python"`, `id="code-go"`, `data-lang="python"`, `<figcaption>Output</figcaption>`, `href="/python/closures-and-nonlocal/"`},
+		// A feature names its language and its first version.
+		"python/closures-and-nonlocal/index.html": {`<dt>Language</dt>`, `<dd><a href="/python/">Python</a></dd>`, `<dt>Since</dt><dd>3.0</dd>`},
+		// A language page has the facts of the language and the parts of its guide.
+		"python/index.html": {`<dt>Typing</dt><dd>dynamic, strong, checked at runtime and optional-static</dd>`, `<dt>Appeared</dt><dd>1991</dd>`, `<code>py pyi</code>`, `href="/python/functions/"`, `href="/python/3.14/"`},
+	}
+	for p, wants := range checks {
+		s := read(p)
+		for _, w := range wants {
+			if !strings.Contains(s, w) {
+				t.Errorf("%s does not contain %q", p, w)
+			}
+		}
+	}
+	if s := read("matrix/index.html"); !strings.Contains(s, `href="/closures/#code-python"`) {
+		t.Error("the matrix has no cell for the Python example of closures")
+	}
+	for _, p := range []string{"matrix/index.html", "languages/index.html", "llms.txt"} {
+		if s := read(p); strings.Contains(s, "algorithm") || strings.Contains(s, "Algorithm") {
+			t.Errorf("%s still has text of the algorithm site", p)
+		}
+	}
+}
