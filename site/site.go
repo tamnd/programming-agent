@@ -266,6 +266,7 @@ var funcs = template.FuncMap{
 	},
 	"plural": plural,
 	"comma":  comma,
+	"inc":    func(i int) int { return i + 1 },
 	"join":   strings.Join,
 	"title": func(s string) string {
 		if s == "" {
@@ -386,6 +387,14 @@ func (b *builder) resolve(slug string) (string, string, bool) {
 	return "", "", false
 }
 
+// since gives the first version of a feature node, for {since:slug}.
+func (b *builder) since(slug string) (string, bool) {
+	if n, ok := b.c.BySlug[slug]; ok && n.Since != "" {
+		return n.Since, true
+	}
+	return "", false
+}
+
 // area finds a top area or a sub-area by its id.
 func (b *builder) area(id string) *node.Area {
 	if a, ok := b.c.AreaByID[id]; ok {
@@ -400,7 +409,12 @@ func (b *builder) area(id string) *node.Area {
 }
 
 func (b *builder) render(src string) markup.Result {
-	r, err := markup.RenderWith(src, markup.Options{Resolve: b.resolve, Math: b.math.Render})
+	return b.renderSources(src, 0)
+}
+
+// renderSources renders a body whose front matter has n sources, so that [^1] to [^n] are citations.
+func (b *builder) renderSources(src string, n int) markup.Result {
+	r, err := markup.RenderWith(src, markup.Options{Resolve: b.resolve, Math: b.math.Render, Sources: n, Since: b.since})
 	if err != nil {
 		b.opt.Log("markup: %v", err)
 	}

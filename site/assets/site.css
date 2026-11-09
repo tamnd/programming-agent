@@ -270,6 +270,22 @@ details.tests summary span { color: var(--muted); font-family: var(--sans); marg
 .page-links { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; font-size: 0.9rem; }
 ol.refs { padding-left: 1.4rem; max-width: var(--measure); }
 ol.refs li { margin-bottom: 0.35rem; }
+ol.refs li:target { background: var(--surface); }
+sup.cite { font-size: 0.72em; line-height: 0; }
+sup.cite a { text-decoration: none; padding: 0 0.1em; }
+sup.cite a::before { content: "["; }
+sup.cite a::after { content: "]"; }
+sup.cite.missing, .since.missing { color: var(--bad); }
+.rule-ref code, .std-ref code { font-size: 0.85em; }
+.since { display: inline-block; padding: 0 0.35em; border: 1px solid var(--muted); border-radius: 3px; font-size: 0.8em; font-variant-numeric: tabular-nums; }
+.prose blockquote.callout { color: inherit; border-left: 3px solid var(--muted); }
+.prose blockquote.callout p:last-child { margin-bottom: 0; }
+.callout-title { font-weight: 600; margin-bottom: 0.3rem; }
+.callout-note, .callout-tip { border-left-color: #2563eb; }
+.callout-warning { border-left-color: #b45309; }
+.callout-pitfall { border-left-color: #b42318; }
+.callout-history { border-left-color: #6b7280; }
+.callout-since { border-left-color: #047857; }
 
 /* The matrix */
 .matrix { font-size: 0.85rem; }

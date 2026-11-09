@@ -1,7 +1,9 @@
 // Package markup turns the Markdown of nodes and proofs into HTML (spec 06.2).
 //
-// It adds four things to CommonMark and GFM:
-//   - [[slug]] and [[slug|text]] link to a node;
+// It adds these things to CommonMark and GFM:
+//   - [[slug]], [[owner/slug]], [[slug#anchor]] and [[slug|text]] link to a node, an area or a card, and [[al:slug]] links to a page of the algorithm site;
+//   - [^n] cites the source n of the front matter, and {rule:...}, {std:...} and {since:...} are inline references;
+//   - a block quote that starts with [!note], [!warning], [!pitfall], [!history], [!tip] or [!since v="..."] is a callout;
 //   - $...$ is inline math, and $$...$$ or a ```math block is display math, which KaTeX renders at build time;
 //   - a ```pseudo block is pseudocode with stable line ids (spec 06.4);
 //   - other fenced blocks are highlighted with Chroma at build time.
@@ -38,6 +40,12 @@ type Options struct {
 	Resolve Resolver
 	// Math renders formulas at build time. When it is nil, a formula is left as TeX between \( \) or \[ \], for a renderer in the browser.
 	Math MathFunc
+	// Sources is the number of sources in the front matter. A citation [^n] links to the source n, from 1 to Sources.
+	Sources int
+	// Since gives the version that added a feature, for {since:<slug>}.
+	Since func(slug string) (string, bool)
+	// RuleURL gives the URL of a rule of a language reference, for {rule:<owner>/<id>}. An empty URL gives no link.
+	RuleURL func(owner, id string) string
 }
 
 // Heading is one entry of the table of contents.
@@ -49,15 +57,19 @@ type Heading struct {
 
 // Result is the output of Render.
 type Result struct {
-	HTML       string
-	TOC        []Heading
-	Missing    []string // slugs of [[links]] that do not resolve
-	LineIDs    []string // the line ids of the pseudocode blocks, in order
-	Sections   []string // the texts of the level 2 headings, in order
-	MathErrors []string // the formulas that do not render (rule W07)
+	HTML        string
+	TOC         []Heading
+	Missing     []string // slugs of [[links]] that do not resolve
+	LineIDs     []string // the line ids of the pseudocode blocks, in order
+	Sections    []string // the texts of the level 2 headings, in order
+	MathErrors  []string // the formulas that do not render (rule W07)
+	Cites       []int    // the numbers of the citations [^n], in order
+	BadCites    []int    // the citations with no source in the front matter (rule G02)
+	BadCallouts []string // the callouts of a kind that is not known
 }
 
-var wikiLink = regexp.MustCompile(`\[\[([a-z0-9][a-z0-9-]*)(?:\|([^\]]+))?\]\]`)
+// wikiLink is [[slug]], [[slug#anchor]] or [[slug|text]]. A slug of an owned node or a card has slashes, and the last part can have capitals, dots and colons, as in [[python/api/str.split]] and [[rust/errors/E0382]].
+var wikiLink = regexp.MustCompile(`\[\[((?:al:|m2:)?[a-z0-9][A-Za-z0-9._:/-]*)(#[A-Za-z0-9._-]+)?(?:\|([^\]]+))?\]\]`)
 
 // Render renders Markdown to HTML.
 func Render(src string, resolve Resolver) (Result, error) {
@@ -70,8 +82,10 @@ func RenderWith(src string, opt Options) (Result, error) {
 	src, bad := displayMath(src)
 	res.MathErrors = append(res.MathErrors, bad...)
 	src = linkWiki(src, opt.Resolve, &res)
+	var mk marks
+	src = mk.pre(src, opt, &res)
 	md := goldmark.New(
-		goldmark.WithExtensions(extension.GFM, extension.Footnote, mathExt{}),
+		goldmark.WithExtensions(extension.GFM, extension.Footnote, mathExt{}, calloutExt{res: &res}),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
 		goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(&codeRenderer{res: &res, math: opt.Math}, 100))),
 	)
@@ -84,7 +98,7 @@ func RenderWith(src string, opt Options) (Result, error) {
 		}
 		id, _ := h.AttributeString("id")
 		idb, _ := id.([]byte)
-		t := plainText(h, source)
+		t := mk.plain(plainText(h, source))
 		if h.Level == 2 {
 			res.Sections = append(res.Sections, t)
 		}
@@ -100,7 +114,7 @@ func RenderWith(src string, opt Options) (Result, error) {
 	if err := md.Renderer().Render(&buf, source, doc); err != nil {
 		return res, err
 	}
-	res.HTML = buf.String()
+	res.HTML = mk.post(buf.String())
 	return res, nil
 }
 
@@ -142,10 +156,19 @@ func linkWiki(src string, resolve Resolver, res *Result) string {
 		}
 		lines[i] = wikiLink.ReplaceAllStringFunc(l, func(m string) string {
 			sm := wikiLink.FindStringSubmatch(m)
-			slug, label := sm[1], sm[2]
+			slug, anchor, label := sm[1], sm[2], sm[3]
 			name, url, ok := "", "", false
-			if resolve != nil {
+			switch {
+			case strings.HasPrefix(slug, "al:"):
+				name, url, ok = humanSlug(slug[3:]), "https://algorithm.tamnd.com/"+slug[3:]+"/", true
+			case strings.HasPrefix(slug, "m2:"):
+				name, url, ok = slug[3:], "https://math2.tamnd.com/t/"+slug[3:]+"/", true
+			case resolve != nil:
 				name, url, ok = resolve(slug)
+			}
+			if ok && strings.Contains(slug, "/api/") && label == "" {
+				// An api card renders as code.
+				name = "`" + strings.Trim(name, "`") + "`"
 			}
 			if !ok {
 				res.Missing = append(res.Missing, slug)
@@ -157,10 +180,19 @@ func linkWiki(src string, resolve Resolver, res *Result) string {
 			if label == "" {
 				label = name
 			}
-			return "[" + label + "](" + url + ")"
+			return "[" + label + "](" + url + anchor + ")"
 		})
 	}
 	return strings.Join(lines, "\n")
+}
+
+// humanSlug makes a name from a slug: merge-sort gives Merge sort.
+func humanSlug(s string) string {
+	if s == "" {
+		return s
+	}
+	s = strings.ReplaceAll(s, "-", " ")
+	return strings.ToUpper(s[:1]) + s[1:]
 }
 
 // codeRenderer renders fenced code blocks.
