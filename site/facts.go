@@ -42,6 +42,11 @@ func (b *builder) facts(n *node.Node) []FactRow {
 			out = append(out, FactRow{Key: k, Text: strings.Join(v, " "), Code: true})
 		}
 	}
+	people := func(k string, slugs []string) {
+		if len(slugs) > 0 {
+			out = append(out, FactRow{Key: k, Links: b.personLinks(slugs)})
+		}
+	}
 	url := func(k, u string) {
 		if u != "" {
 			out = append(out, FactRow{Key: k, Text: strings.TrimPrefix(strings.TrimPrefix(u, "https://"), "http://"), URL: u})
@@ -59,17 +64,12 @@ func (b *builder) facts(n *node.Node) []FactRow {
 		if n.Tier > 0 {
 			text("Tier", fmt.Sprint(n.Tier))
 		}
-		list("Paradigms", n.Paradigms)
-		text("Typing", typing(n.Typing))
-		text("Memory", n.Memory)
-		list("Execution", n.Execution)
+		// The box holds who and when. The technical model is in the table of the section "The language at a glance" (glance).
 		if n.Appeared > 0 {
 			text("Appeared", fmt.Sprint(n.Appeared))
 		}
-		list("Designed by", n.Designers)
-		links("Influenced by", n.InfluencedBy)
+		people("Designed by", n.Designers)
 		text("Standard", n.Standard)
-		code("File extensions", n.FileExtensions)
 		text("Licence of the reference implementation", n.ReferenceImpl)
 	case "feature":
 		text("Since", n.Since)
@@ -173,7 +173,135 @@ func (b *builder) realizedBy(slug string) []string {
 	return out
 }
 
-// typing writes the typing map of a language as a short phrase, such as "dynamic, strong, checked at runtime and optional-static".
+// typing writes the typing map of a language as a short phrase, such as "dynamic, strong, checked at run time and by optional static checkers".
+// glance gives the rows of the table of the section "The language at a glance" (spec 06.3): the paradigms, the type system, the memory model and the execution model, from the front matter.
+func (b *builder) glance(n *node.Node) []FactRow {
+	var out []FactRow
+	add := func(k, v string) {
+		if v != "" {
+			out = append(out, FactRow{Key: k, Text: v})
+		}
+	}
+	add("Paradigms", words(n.Paradigms))
+	add("Typing", typing(n.Typing))
+	add("Memory", phrase(n.Memory))
+	add("Execution", words(n.Execution))
+	if len(n.InfluencedBy) > 0 {
+		out = append(out, FactRow{Key: "Influenced by", Links: b.nameLinks(n.InfluencedBy)})
+	}
+	if len(n.FileExtensions) > 0 {
+		ext := make([]string, len(n.FileExtensions))
+		for i, e := range n.FileExtensions {
+			ext[i] = "." + strings.TrimPrefix(e, ".")
+		}
+		out = append(out, FactRow{Key: "File extensions", Text: strings.Join(ext, " "), Code: true})
+	}
+	if u, ok := n.Reference["url"].(string); ok && u != "" {
+		out = append(out, FactRow{Key: "Definition", Text: strings.TrimPrefix(u, "https://"), URL: u})
+	}
+	return out
+}
+
+// phrases are the words for the ids of the language front matter (spec 04.5) that humanize does not give well.
+var phrases = map[string]string{
+	"interpreted-bytecode": "compiled to bytecode and interpreted",
+	"jit":                  "just-in-time compiled",
+	"aot":                  "compiled ahead of time",
+	"native":               "compiled to machine code",
+	"vm":                   "runs on a virtual machine",
+	"transpiled":           "compiled to another language",
+	"garbage-collected":    "garbage collected",
+	"ownership":            "ownership and borrowing, checked at compile time",
+	"manual":               "managed by hand",
+	"reference-counted":    "reference counted",
+}
+
+// checks are the words for the values of typing.checking.
+var checks = map[string]string{
+	"runtime":         "at run time",
+	"run-time":        "at run time",
+	"compile-time":    "at compile time",
+	"static":          "at compile time",
+	"optional-static": "by optional static checkers",
+	"gradual":         "by gradual typing",
+}
+
+func checkPhrase(id string) string {
+	if c, ok := checks[id]; ok {
+		return c
+	}
+	return "at " + strings.ReplaceAll(id, "-", " ")
+}
+
+func phrase(id string) string {
+	if p, ok := phrases[id]; ok {
+		return p
+	}
+	return strings.ReplaceAll(id, "-", " ")
+}
+
+func words(ids []string) string {
+	out := make([]string, len(ids))
+	for i, id := range ids {
+		out[i] = phrase(id)
+	}
+	return strings.Join(out, ", ")
+}
+
+// personLinks links the person nodes. A person with no node shows the name from the slug, with each word capitalized.
+func (b *builder) personLinks(slugs []string) []Link {
+	out := b.links(slugs)
+	for i := range out {
+		if out[i].Missing {
+			out[i].Name = titleWords(slugs[i])
+		}
+	}
+	return out
+}
+
+// nameLinks links the language nodes. A language with no node shows its register name, or the slug.
+func (b *builder) nameLinks(slugs []string) []Link {
+	out := b.links(slugs)
+	for i := range out {
+		if !out[i].Missing {
+			continue
+		}
+		if l := b.c.LangByID[slugs[i]]; l != nil {
+			out[i].Name = l.Name
+		} else {
+			out[i].Name = titleWords(strings.TrimSuffix(slugs[i], "-language"))
+		}
+	}
+	return out
+}
+
+// particles stay in lower case inside a name, as in "Guido van Rossum".
+var particles = map[string]bool{"van": true, "von": true, "de": true, "der": true, "den": true, "da": true, "di": true, "du": true, "del": true, "la": true, "le": true, "bin": true, "ibn": true}
+
+// titleWords makes a name from a slug: "guido-van-rossum" gives "Guido van Rossum", and "modula-3" gives "Modula-3".
+func titleWords(slug string) string {
+	parts := strings.Split(slug, "-")
+	var b strings.Builder
+	for i, w := range parts {
+		if w == "" {
+			continue
+		}
+		if i > 0 {
+			if w[0] >= '0' && w[0] <= '9' {
+				b.WriteByte('-')
+			} else {
+				b.WriteByte(' ')
+			}
+		}
+		if i > 0 && particles[w] {
+			b.WriteString(w)
+			continue
+		}
+		b.WriteString(strings.ToUpper(w[:1]) + w[1:])
+	}
+	return b.String()
+}
+
 func typing(m map[string]any) string {
 	if len(m) == 0 {
 		return ""
@@ -188,14 +316,14 @@ func typing(m map[string]any) string {
 	case []any:
 		var c []string
 		for _, x := range v {
-			c = append(c, fmt.Sprint(x))
+			c = append(c, checkPhrase(fmt.Sprint(x)))
 		}
 		if len(c) > 0 {
-			parts = append(parts, "checked at "+strings.Join(c, " and "))
+			parts = append(parts, "checked "+strings.Join(c, " and "))
 		}
 	case string:
 		if v != "" {
-			parts = append(parts, "checked at "+v)
+			parts = append(parts, "checked "+checkPhrase(v))
 		}
 	}
 	if v, ok := m["inference"].(string); ok && v != "" && v != "n/a" && v != "none" {

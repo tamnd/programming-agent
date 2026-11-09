@@ -79,6 +79,12 @@
 </section>
 {{end}}
 
+{{define "glance-body"}}<table class="glance"><tbody>{{range .Glance}}<tr><th scope="row">{{.Key}}</th><td>{{if .Links}}{{template "links" .Links}}{{else if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else if .Code}}<code>{{.Text}}</code>{{else}}{{.Text}}{{end}}</td></tr>{{end}}</tbody></table>
+{{end}}
+
+{{define "glance-section"}}<h2 id="the-language-at-a-glance">The language at a glance</h2>
+{{template "glance-body" .}}{{end}}
+
 {{define "guide-body"}}{{with .Guide}}{{template "tiles" .}}{{end}}
 {{with .Owned}}<h3 id="pages-of-this-language">Pages of this language</h3><ul class="chips">{{range .}}<li style="--hue: {{.Hue}}">{{template "link" .}}</li>{{end}}</ul>{{end}}
 {{end}}

@@ -471,3 +471,5 @@ mark { background: color-mix(in srgb, var(--st-compare) 35%, transparent); color
 .decls code.stmt { white-space: pre-wrap; word-break: break-word; background: none; padding: 0; }
 .decls td { vertical-align: top; padding: 0.4rem 0.75rem 0.4rem 0; }
 .decls .doc { color: var(--muted); font-size: 0.88rem; }
+table.glance { margin: 0 0 1rem; }
+table.glance th { text-align: left; font-weight: 600; white-space: nowrap; padding-right: 1.2rem; vertical-align: top; }
