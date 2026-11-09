@@ -46,6 +46,30 @@ func (r *Runner) ProgramReady(p Program) error {
 	return r.Available(Recipe{ID: p.ID, Tools: p.Tools, Version: p.Version})
 }
 
+// WithTool gives a copy of the program that uses the command to in place of the tool from, such as python3.15 in place of python3.
+func (p Program) WithTool(from, to string) Program {
+	swap := func(c []string) []string {
+		c = append([]string(nil), c...)
+		if len(c) > 0 && c[0] == from {
+			c[0] = to
+		}
+		return c
+	}
+	p.Tools = swap(p.Tools)
+	for i := range p.Tools {
+		if p.Tools[i] == from {
+			p.Tools[i] = to
+		}
+	}
+	steps := make([][]string, len(p.Steps))
+	for i, s := range p.Steps {
+		steps[i] = swap(s)
+	}
+	p.Steps = steps
+	p.Version = swap(p.Version)
+	return p
+}
+
 // RunResult is what one run of a block gives.
 type RunResult struct {
 	Stdout, Stderr string

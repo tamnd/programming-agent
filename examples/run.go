@@ -150,12 +150,37 @@ func adjust(p lang.Program, b *Block) lang.Program {
 	if kind, ok := strings.CutPrefix(b.Attrs["expect"], "sanitizer:"); ok && (p.ID == "c" || p.ID == "cpp") {
 		extra = append(extra, "-g", "-fsanitize="+kind, "-fno-sanitize-recover=all")
 	}
-	extra = append(extra, strings.Fields(b.Attrs["flags"])...)
+	flags := strings.Fields(b.Attrs["flags"])
+	extra = append(extra, flags...)
+	// A flag of the block replaces the default flag of the same option, such as --edition 2021 or -std=c17.
+	for _, fl := range flags {
+		switch {
+		case fl == "--edition" || strings.HasPrefix(fl, "--edition="):
+			first = dropOption(first, "--edition")
+		case strings.HasPrefix(fl, "-std="):
+			first = dropOption(first, "-std=")
+		}
+	}
 	if len(extra) > 0 {
 		first = append(first[:1], append(extra, first[1:]...)...)
 	}
 	p.Steps[0] = first
 	return p
+}
+
+// dropOption removes an option from a command: "--edition 2024", "--edition=2024" or "-std=c23".
+func dropOption(c []string, opt string) []string {
+	var out []string
+	for i := 0; i < len(c); i++ {
+		switch {
+		case c[i] == opt:
+			i++
+		case strings.HasPrefix(c[i], opt) && (strings.HasSuffix(opt, "=") || strings.HasPrefix(c[i], opt+"=")):
+		default:
+			out = append(out, c[i])
+		}
+	}
+	return out
 }
 
 // checkFailure checks the failure signature of a fails block (rule X04). It returns why the run does not match, or "".

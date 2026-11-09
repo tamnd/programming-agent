@@ -29,6 +29,7 @@ func cmdRun(args []string) error {
 	keep := f.Bool("keep", false, "keep the temporary directories")
 	jobs := f.Int("j", max(1, runtime.NumCPU()/2), "the number of blocks that run at the same time")
 	strict := f.Bool("strict", false, "fail when a block is skipped because its toolchain is missing")
+	tools := f.String("tool", "", "a comma list of tool replacements, such as python3=python3.15, to run the blocks with another toolchain on this machine")
 	if err := parse(f, args); err != nil {
 		return err
 	}
@@ -47,6 +48,18 @@ func cmdRun(args []string) error {
 				return usageError{fmt.Sprintf("prog run has no runner for the language %q", l)}
 			}
 			want[l] = true
+		}
+	}
+	for _, kv := range strings.Split(*tools, ",") {
+		if kv = strings.TrimSpace(kv); kv == "" {
+			continue
+		}
+		from, to, ok := strings.Cut(kv, "=")
+		if !ok || from == "" || to == "" {
+			return usageError{fmt.Sprintf("-tool needs name=replacement, not %q", kv)}
+		}
+		for id, p := range lang.Programs {
+			lang.Programs[id] = p.WithTool(from, to)
 		}
 	}
 	box, err := openSandbox(*sandbox, under(c.Root, *images), *unsafe)
@@ -69,8 +82,10 @@ func cmdRun(args []string) error {
 	}
 	diag := map[string]bool{}
 	for _, n := range c.Nodes {
-		if n.Kind == "diagnostic" && n.Code != "" {
+		// A diagnostic card has the code in code:, and its local slug is the code too, such as rust/errors/E0382.
+		if n.Kind == "diagnostic" {
 			diag[n.Code] = true
+			diag[n.Local] = true
 		}
 	}
 

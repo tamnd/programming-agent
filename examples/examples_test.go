@@ -173,3 +173,21 @@ func TestRunPython(t *testing.T) {
 		t.Errorf("a wrong output must fail: %+v", r)
 	}
 }
+
+func TestAdjust(t *testing.T) {
+	b := &Block{Info: `rust fails flags="--edition 2021"`}
+	fillInfo(b)
+	got := strings.Join(adjust(lang.Programs["rust"], b).Steps[0], " ")
+	if got != "rustc --edition 2021 -o main main.rs" {
+		t.Errorf("rust: %s", got)
+	}
+	b = &Block{Info: `c fails expect=sanitizer:address flags=-std=c17`}
+	fillInfo(b)
+	got = strings.Join(adjust(lang.Programs["c"], b).Steps[0], " ")
+	if got != "cc -g -fsanitize=address -fno-sanitize-recover=all -std=c17 -Wall -o main main.c -lm" {
+		t.Errorf("c: %s", got)
+	}
+	if strings.Join(lang.Programs["rust"].Steps[0], " ") != "rustc --edition 2024 -o main main.rs" {
+		t.Error("adjust changed the program of the language")
+	}
+}
