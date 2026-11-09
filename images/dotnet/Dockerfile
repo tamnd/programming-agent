@@ -5,4 +5,6 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 DOTNET_SKIP_FIRST_TIME_EXPERIE
 # Restore the packages of the test project now. The container has no network, so a restore at test time can only read /opt/nuget.
 COPY Restore.csproj /tmp/restore/Restore.csproj
 RUN cd /tmp/restore && dotnet restore -p:NuGetAudit=true -p:NuGetAuditMode=all && rm -rf /tmp/restore /root/.nuget /root/.local && chmod -R a+rX /opt/nuget
+# The powershell recipe runs the .Tests.ps1 files with Pester 5. The SDK image has pwsh. AllUsers puts the module in /usr/local/share/powershell/Modules.
+RUN pwsh -NoProfile -NonInteractive -Command "Set-PSRepository PSGallery -InstallationPolicy Trusted; Install-Module Pester -RequiredVersion 5.7.1 -Scope AllUsers -Force" && rm -rf /root/.local /root/.cache
 USER 1000:1000
