@@ -408,11 +408,18 @@ func (b *builder) guideTiles(n *node.Node) []Tile {
 	}
 	hue := b.hueOf("languages")
 	var out []Tile
+	shown := map[string]bool{}
 	for _, s := range a.Children {
 		k := len(b.c.InArea(s.Path()))
-		out = append(out, Tile{Name: s.Name, URL: s.URL(), Summary: s.Summary, Hue: hue, Count: k, Unit: "page", Missing: k == 0})
+		t := Tile{Name: s.Name, URL: s.URL(), Summary: s.Summary, Hue: hue, Count: k, Unit: "page", Missing: k == 0}
+		if c := len(b.cardsAt[s.URL()]); c > 0 {
+			shown[s.URL()] = true
+			t.Missing = false
+			t.Extra = plural(c, "card", "cards")
+		}
+		out = append(out, t)
 	}
-	return out
+	return append(out, b.cardTiles(n.Slug, shown)...)
 }
 
 // ownedLinks lists the nodes that a language, a tool or a library owns, such as python/match-statement.

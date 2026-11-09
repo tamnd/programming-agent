@@ -1,0 +1,1 @@
+{"tag":"9PEP63","kind":"proposal","owner":"python","id":"pep-634","title":"Structural Pattern Matching: Specification","summary":"Adds the match statement and its patterns to Python.","status":"final","type":"standards-track","created":"2020-09-12","release":"3.10","authors":["Brandt Bucher","Guido van Rossum"],"url":"https://peps.python.org/pep-0634/","licence":"CC0-1.0"}

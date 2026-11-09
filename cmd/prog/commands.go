@@ -126,7 +126,9 @@ func cmdNew(args []string) error {
 	if c.BySlug[full] != nil {
 		return fmt.Errorf("the slug %q is used by %s", full, c.BySlug[full].Rel)
 	}
-	if *owner == "" && (c.Reserved[slug] || c.LangByID[slug] != nil || c.AreaByID[slug] != nil) {
+	// A language node has the id of its language as its slug, such as python.
+	isLang := *kind == "language" && c.LangByID[slug] != nil
+	if *owner == "" && !isLang && (c.Reserved[slug] || c.LangByID[slug] != nil || c.AreaByID[slug] != nil) {
 		return fmt.Errorf("the slug %q is a reserved word, a language id or an area id", slug)
 	}
 	dir := filepath.Join(*root, "nodes", filepath.FromSlash(*area), slug)

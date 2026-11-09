@@ -208,6 +208,12 @@ type Front struct {
 	Path     string   `yaml:"path,omitempty" json:"api_path,omitempty"`
 	Entity   string   `yaml:"entity,omitempty" json:"entity,omitempty"`
 	Module   string   `yaml:"module,omitempty" json:"module,omitempty"`
+	// Signature is the signature of an api entry. ProposalStatus, ProposalType, Created and Release are the facts of a proposal; the key is not status, because a status is computed (rule T05).
+	Signature      string `yaml:"signature,omitempty" json:"signature,omitempty"`
+	ProposalStatus string `yaml:"proposal_status,omitempty" json:"proposal_status,omitempty"`
+	ProposalType   string `yaml:"proposal_type,omitempty" json:"proposal_type,omitempty"`
+	Created        string `yaml:"created,omitempty" json:"created,omitempty"`
+	Release        string `yaml:"release,omitempty" json:"release,omitempty"`
 
 	// work, person and organization
 	Authors []string `yaml:"authors,omitempty" json:"authors,omitempty"`

@@ -1,0 +1,1 @@
+{"tag":"9STRSP","kind":"api","owner":"python","path":"str.split","entity":"method","signature":"str.split(sep=None, maxsplit=-1)","module":"builtins","summary":"Returns a list of the words in the string, with sep as the delimiter.","doc":{"url":"https://docs.python.org/3/library/stdtypes.html#str.split"}}

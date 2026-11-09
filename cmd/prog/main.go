@@ -58,6 +58,7 @@ var commands []command
 func init() {
 	commands = []command{
 		{"new", "make a node directory with a provisional id and the sections of its kind", cmdNew},
+		{"promote", "make a node from a card; the node keeps the tag and the facts, and the row leaves its register", cmdPromote},
 		{"fmt", "put node files, registers and topics in canonical form", cmdFmt},
 		{"mint", "give each provisional id a permanent tag", cmdMint},
 		{"mv", "rename a node or move it to another area; the old URL redirects", cmdMv},

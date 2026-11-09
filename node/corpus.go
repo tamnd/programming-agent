@@ -92,6 +92,12 @@ type Corpus struct {
 	OldSlugs map[string]string
 	// Errors are the node directories that could not be read. Package check reports them as T01.
 	Errors []error
+	// Cards are the rows of the card registers under cards/, sorted by slug (spec 04.1).
+	Cards []*Card
+	// CardBySlug holds the first card of each slug.
+	CardBySlug map[string]*Card
+	// CardErrors are the card rows that could not be read. Package check reports them as C01.
+	CardErrors []error
 }
 
 // Load reads the whole content tree at root.
@@ -178,6 +184,13 @@ func Load(root string) (*Corpus, error) {
 			if _, dup := c.ByTag[n.Tag]; !dup {
 				c.ByTag[n.Tag] = n
 			}
+		}
+	}
+	c.Cards, c.CardErrors = ReadCards(root)
+	c.CardBySlug = map[string]*Card{}
+	for _, k := range c.Cards {
+		if _, dup := c.CardBySlug[k.Slug()]; !dup {
+			c.CardBySlug[k.Slug()] = k
 		}
 	}
 	return c, nil

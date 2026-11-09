@@ -7,3 +7,7 @@
 7QKX2M closures
 8ASYMP asymptotic-notation
 8NNKCK python/closures-and-nonlocal
+9E0382 rust/errors/E0382
+9JSNPR javascript/api/JSON.parse
+9PEP63 python/proposals/pep-634
+9STRSP python/api/str.split

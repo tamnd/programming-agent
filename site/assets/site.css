@@ -121,6 +121,23 @@ main.embed { padding: 0.6rem; max-width: none; }
 .tile-meta { margin-top: auto; padding-top: 0.3rem; font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .tile.empty a { background: var(--surface); }
 .tile.empty .tile-name { color: var(--soft); }
+.cards { max-width: 56rem; margin: 0 0 2rem; }
+.card { padding: 0.9rem 1.1rem 0.7rem; border-left: 3px solid hsl(var(--hue) 50% 60%); background: color-mix(in srgb, var(--surface) 55%, transparent); margin-bottom: 0.6rem; scroll-margin-top: 5rem; }
+.card:target { background: hsl(var(--hue) var(--tint-s) var(--tint-l)); }
+.card-head { font-size: 1.08rem; margin: 0 0 0.35rem; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline; }
+.card-head code { font-size: 0.85rem; color: var(--muted); }
+.card-anchor { color: inherit; text-decoration: none; }
+.card-anchor:hover { text-decoration: underline; }
+.card p { margin: 0.3rem 0; }
+.card-sig { margin: 0.3rem 0 0.5rem; padding: 0.45rem 0.7rem; background: var(--surface-2); overflow-x: auto; font-size: 0.88rem; }
+.card-facts { display: flex; flex-wrap: wrap; gap: 0.3rem 1.4rem; margin: 0.4rem 0; font-size: 0.9rem; }
+.card-facts div { display: flex; gap: 0.4rem; }
+.card-facts dt { color: var(--muted); }
+.card-facts dd { margin: 0; }
+.card-foot { font-size: 0.83rem; color: var(--muted); }
+.pager { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0 2rem; }
+.pager a, .pager span { padding: 0.25rem 0.65rem; background: var(--surface); text-decoration: none; font-variant-numeric: tabular-nums; }
+.pager span { background: var(--accent); color: var(--on-accent); }
 .items { list-style: none; margin: 0 0 1.5rem; padding: 0; max-width: 56rem; }
 .item { display: flex; gap: 1rem; justify-content: space-between; padding: 0.75rem 0.9rem; border-left: 3px solid hsl(var(--hue) 50% 60%); background: color-mix(in srgb, var(--surface) 55%, transparent); margin-bottom: 0.35rem; }
 .item-main a { font-weight: 620; }
