@@ -1,20 +1,27 @@
-# Slugs that no node may use, because the site uses the path (spec 14.2, rule X06).
+# Slugs that no node may use, because the site uses the path (spec 16.2, rule X06).
 - about
 - api
 - areas
 - assets
 - badges
+- compare
+- compat
+- concepts
 - contribute
 - embed
+- errors
+- exercises
 - kind
 - languages
 - learn
+- lints
 - llms
 - matrix
-- problems
+- proposals
 - search
 - spec
 - t
-- techniques
+- tasks
 - visualize
+- x
 - 404

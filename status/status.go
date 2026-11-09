@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 
@@ -600,8 +599,6 @@ func Lead(body string) string {
 	return strings.TrimSpace(body[:i])
 }
 
-var listItem = regexp.MustCompile(`(?m)^\s*(?:[-*]|\d+\.)\s+\S`)
-
 // need is one requirement of a writing level.
 type need struct {
 	what string
@@ -624,9 +621,7 @@ func Writing(n *node.Node, env Env) (r Rung) {
 		}
 		return false
 	}
-	items := func(h string, k int) func() bool {
-		return func() bool { return len(listItem.FindAllString(Section(n.Body, h), -1)) >= k }
-	}
+	filled := map[string]bool{"The guide": true, "Versions": true, "Versions and support": true, "Comparison": true, "Support dates": true, "Alternatives": true, "References": true, "Removed and deprecated": true}
 	linked := func() bool {
 		for _, p := range n.Prereqs {
 			if _, ok := env.Corpus.BySlug[p]; !ok {
@@ -635,51 +630,41 @@ func Writing(n *node.Node, env Env) (r Rung) {
 		}
 		return true
 	}
-	lead := func() bool { return Lead(n.Body) != "" }
-	pseudo := func() bool { return strings.Contains(n.Body, "```pseudo") }
-	claimsOK := func() bool { return n.Complexity != nil && len(n.Complexity.Time) > 0 }
-	proofAny := func() bool { return len(n.Proofs) > 0 }
-	presets := func() bool { return len(n.Presets) > 0 }
-	exercises := func() bool { return n.Level == "advanced" || n.Level == "research" || len(n.Exercises) > 0 }
+	section := func(h string) func() bool {
+		return func() bool {
+			if h == "In languages" {
+				return len(n.Examples) > 0 || has(h)()
+			}
+			if filled[h] {
+				return true
+			}
+			return has(h)()
+		}
+	}
+	history := func() bool { return n.History != nil || has("History")() }
 
 	var levels [5][]need
 	levels[0] = []need{{"a name", func() bool { return n.Name != "" }}, {"a summary", func() bool { return n.Summary != "" }}}
-	switch n.Kind {
-	case "algorithm":
-		levels[1] = []need{{"the lead paragraph", lead}, {"the section The problem", has("The problem")}, {"pseudocode in The algorithm", pseudo}, {"complexity claims in the front matter", claimsOK}, {"one source with a locator", located}}
-		levels[2] = []need{{"In plain words", has("In plain words")}, {"Example", has("Example")}, {"Correctness with at least a sketch", func() bool { return has("Correctness")() && proofAny() }}, {"Complexity", has("Complexity")}, {"Properties", has("Properties")}}
-		levels[3] = []need{{"Pitfalls with at least two items", items("Pitfalls", 2)}, {"History with a source", func() bool { return has("History")() && n.History != nil }}, {"at least three sources", sources(3)}, {"every prerequisite exists", linked}, {"a scene preset for the example", presets}}
-		levels[4] = []need{{"Variants and improvements", has("Variants and improvements")}, {"When to use it", has("When to use it")}, {"an exercise", exercises}}
-	case "data-structure":
-		levels[1] = []need{{"the lead paragraph", lead}, {"The abstract type", has("The abstract type")}, {"one source with a locator", located}}
-		levels[2] = []need{{"Representation", has("Representation")}, {"Operations", has("Operations")}, {"Correctness", has("Correctness")}}
-		levels[3] = []need{{"Complexity", has("Complexity")}, {"Pitfalls with at least two items", items("Pitfalls", 2)}, {"at least three sources", sources(3)}, {"every prerequisite exists", linked}}
-		levels[4] = []need{{"Variants", has("Variants")}, {"When to use it", has("When to use it")}}
-	case "problem":
-		levels[1] = []need{{"the lead paragraph", lead}, {"Definition", has("Definition")}, {"one source with a locator", located}}
-		levels[2] = []need{{"Examples", has("Examples")}, {"In plain words", has("In plain words")}}
-		levels[3] = []need{{"Bounds", has("Bounds")}, {"a known algorithm", func() bool { return len(env.Corpus.Solvers(n.Slug)) > 0 }}, {"a contract.yaml", func() bool { _, err := os.Stat(filepath.Join(n.Dir, "contract.yaml")); return err == nil }}}
-		levels[4] = []need{{"Reductions", has("Reductions")}, {"Applications", has("Applications")}}
-	case "technique":
-		levels[1] = []need{{"the lead paragraph", lead}, {"one source with a locator", located}}
-		levels[2] = []need{{"When it applies", has("When it applies")}, {"The template", has("The template")}}
-		levels[3] = []need{{"three classic examples", items("Classic examples", 3)}}
-		levels[4] = []need{{"Variations", has("Variations")}, {"Pitfalls", has("Pitfalls")}, {"five exercises", func() bool { return len(n.Exercises) >= 5 }}}
-	case "theorem":
-		levels[1] = []need{{"the lead paragraph", lead}, {"Statement", has("Statement")}, {"one source with a locator", located}}
-		levels[2] = []need{{"Proof", func() bool { return has("Proof")() || proofAny() }}}
-		levels[3] = []need{{"In plain words", has("In plain words")}, {"Tightness", has("Tightness")}}
-		levels[4] = []need{{"Consequences", has("Consequences")}, {"History", has("History")}}
-	default: // concept, definition, model, abstract type and the others
-		main := map[string]string{"concept": "The idea", "definition": "Definition", "model": "The machine", "abstract-type": "Operations"}[n.Kind]
-		levels[1] = []need{{"the lead paragraph", lead}, {"one source with a locator", located}}
-		if main != "" {
-			levels[2] = []need{{main, has(main)}}
+	levels[1] = []need{{"one source", sources(1)}}
+	levels[2] = []need{{"one source with a locator", located}}
+	levels[3] = []need{{"every prerequisite exists", linked}, {"at least two sources", sources(2)}}
+	levels[4] = []need{{"at least three sources", sources(3)}, {"a history with a source", history}}
+	if k := node.KindOf(n.Kind); k != nil {
+		for _, sec := range k.Sections {
+			switch sec.Need {
+			case 2:
+				levels[2] = append(levels[2], need{"the section " + sec.Name, section(sec.Name)})
+			case 3:
+				if sec.Name == "When not to use it" || sec.Name == "How to fix it" {
+					// a positive pattern has When not to use it, a negative one has How to fix it
+					want := map[bool]string{true: "How to fix it", false: "When not to use it"}[n.Polarity == "negative"]
+					if sec.Name != want {
+						continue
+					}
+				}
+				levels[3] = append(levels[3], need{"the section " + sec.Name, section(sec.Name)})
+			}
 		}
-		levels[3] = []need{{"examples", func() bool {
-			return has("Examples")() || has("Examples and non-examples")() || has("Laws")() || has("What it counts")()
-		}}, {"every prerequisite exists", linked}}
-		levels[4] = []need{{"at least two sources", sources(2)}}
 	}
 	for lv := range 5 {
 		var miss []string

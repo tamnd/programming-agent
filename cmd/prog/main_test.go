@@ -48,10 +48,10 @@ func TestFlagsAfterArguments(t *testing.T) {
 	if err := os.CopyFS(root, os.DirFS(corpus)); err != nil {
 		t.Fatal(err)
 	}
-	if got := run([]string{"new", "algorithm", "heap-sort", "-area", "sorting/comparison-sorts", "-root", root}); got != 0 {
+	if got := run([]string{"new", "concept", "currying", "-area", "functions-and-abstraction/closures-and-scope", "-root", root}); got != 0 {
 		t.Fatalf("prog new exits with %d", got)
 	}
-	if _, err := os.Stat(filepath.Join(root, "nodes/sorting/comparison-sorts/heap-sort/node.md")); err != nil {
+	if _, err := os.Stat(filepath.Join(root, "nodes/functions-and-abstraction/closures-and-scope/currying/node.md")); err != nil {
 		t.Fatal(err)
 	}
 }

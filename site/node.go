@@ -281,7 +281,7 @@ func (b *builder) nodePage(n *node.Node) (*NodePage, error) {
 	if n.Scene != "" {
 		p.Player = b.playerView(n, r)
 		p.Scripts = []string{p.Player.Script, "/assets/player.js"}
-		html = insertAfterSection(html, b.snippet("player-section", p), "in-plain-words", "the-problem", "the-algorithm", "definition")
+		html = insertAfterSection(html, b.snippet("player-section", p), "solutions", "task", "how-it-works", "idea", "in-plain-words", "the-problem", "the-algorithm", "definition")
 	}
 	if len(p.Proofs) > 0 {
 		html = insertAfterSection(html, b.snippet("proofs-inline", p), "correctness", "complexity", "history", "references")
@@ -438,7 +438,7 @@ func props(m map[string]any) []Prop {
 }
 
 func (b *builder) card(n *node.Node, p *NodePage) *Card {
-	if n.Kind != "algorithm" && n.Kind != "data-structure" && n.Kind != "problem" {
+	if n.Kind != "task" && n.Kind != "algorithm" && n.Kind != "data-structure" && n.Kind != "problem" {
 		return nil
 	}
 	c := &Card{}

@@ -26,7 +26,7 @@ Run these commands in a clone of tamnd/programming.
 
 | Command | What it does |
 | --- | --- |
-| `prog new concept closures -area functions/closures-and-scope` | Makes a node directory with the sections of its kind. |
+| `prog new concept closures -area functions-and-abstraction/closures-and-scope` | Makes a node directory with the sections of its kind. |
 | `prog fmt` | Puts node.md, the registers and the topics in canonical form. Add `-check` to only report. |
 | `prog mint` | Gives each provisional id `NEW-<slug>` a permanent tag. Add `-dry-run` to see the tags first. |
 | `prog mv <slug> <new-slug>` | Renames or moves a node. The old URL redirects. The tag does not change. |

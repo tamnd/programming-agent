@@ -36,9 +36,9 @@ func TestLeanPage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	n := c.BySlug["binary-search"]
+	n := c.BySlug["search-a-sorted-list"]
 	if n == nil {
-		t.Fatal("no binary-search node")
+		t.Fatal("no search-a-sorted-list node")
 	}
 	n.Lean = map[string]string{"module": "Algo.Searching.BinarySearch", "model": "Algo.Searching.BinarySearch.search", "correct": "Algo.Searching.BinarySearch.search_correct"}
 	out := filepath.Join(t.TempDir(), "site")
@@ -52,14 +52,14 @@ func TestLeanPage(t *testing.T) {
 		}
 		return string(b)
 	}
-	page := read("binary-search/index.html")
-	for _, want := range []string{`id="formal-proof"`, `href="/binary-search/lean/"`, "<code>search_correct</code>", "only the standard axioms"} {
+	page := read("search-a-sorted-list/index.html")
+	for _, want := range []string{`id="formal-proof"`, `href="/search-a-sorted-list/lean/"`, "<code>search_correct</code>", "only the standard axioms"} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the node page does not contain %q", want)
 		}
 	}
-	lean := read("binary-search/lean/index.html")
-	for _, want := range []string{"<title>Lean: Binary search", "lean/Algo/Searching/BinarySearch.lean", "#L7-L7", "search_correct", "propext"} {
+	lean := read("search-a-sorted-list/lean/index.html")
+	for _, want := range []string{"<title>Lean: Search a sorted list", "lean/Algo/Searching/BinarySearch.lean", "#L7-L7", "search_correct", "propext"} {
 		if !strings.Contains(lean, want) {
 			t.Errorf("the Lean page does not contain %q", want)
 		}

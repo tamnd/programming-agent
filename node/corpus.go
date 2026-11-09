@@ -21,13 +21,24 @@ type Area struct {
 	Parent   string `yaml:"-" json:"parent,omitempty"`
 }
 
-// Path is "top/sub" for a sub-area and "top" for a top area.
+// Path is "top/sub" for a sub-area and "top" for a top area. A sub-area of a language tree has three parts, such as languages/python/control-flow.
 func (a Area) Path() string {
 	if a.Parent == "" {
 		return a.ID
 	}
 	return a.Parent + "/" + a.ID
 }
+
+// URL is the path of the area page. A topic area is at /<id>/. A language tree is at /<lang>/ and its sub-areas are at /<lang>/<sub>/ (spec 16.2).
+func (a Area) URL() string {
+	if p := a.Path(); strings.HasPrefix(p, "languages/") {
+		return "/" + strings.TrimPrefix(p, "languages/") + "/"
+	}
+	return "/" + a.ID + "/"
+}
+
+// InLanguage tells if the area is a language tree or a part of one.
+func (a Area) InLanguage() bool { return strings.HasPrefix(a.Path(), "languages/") }
 
 // Lang is one entry of registers/languages.yaml (spec 08.2).
 type Lang struct {
@@ -71,6 +82,8 @@ type Corpus struct {
 	ByTag    map[string]*Node
 	Areas    []Area
 	AreaByID map[string]*Area // keyed by Area.Path()
+	// Template is the list of sub-areas of a language tree, from topics/languages.yaml (spec 05.3).
+	Template []Area
 	Langs    []Lang
 	LangByID map[string]*Lang
 	Reserved map[string]bool
@@ -94,6 +107,17 @@ func Load(root string) (*Corpus, error) {
 	if err := readYAML(filepath.Join(root, "topics", "areas.yaml"), &c.Areas); err != nil {
 		return nil, err
 	}
+	if err := readYAML(filepath.Join(root, "registers", "languages.yaml"), &c.Langs); err != nil {
+		return nil, err
+	}
+	sort.SliceStable(c.Langs, func(i, j int) bool { return c.Langs[i].Tier < c.Langs[j].Tier })
+	for i := range c.Langs {
+		c.LangByID[c.Langs[i].ID] = &c.Langs[i]
+	}
+	if err := readYAML(filepath.Join(root, "topics", "languages.yaml"), &c.Template); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	c.languageTrees()
 	for i := range c.Areas {
 		top := &c.Areas[i]
 		c.AreaByID[top.Path()] = top
@@ -101,14 +125,12 @@ func Load(root string) (*Corpus, error) {
 			sub := &top.Children[j]
 			sub.Parent = top.ID
 			c.AreaByID[sub.Path()] = sub
+			for k := range sub.Children {
+				leaf := &sub.Children[k]
+				leaf.Parent = sub.Path()
+				c.AreaByID[leaf.Path()] = leaf
+			}
 		}
-	}
-	if err := readYAML(filepath.Join(root, "registers", "languages.yaml"), &c.Langs); err != nil {
-		return nil, err
-	}
-	sort.SliceStable(c.Langs, func(i, j int) bool { return c.Langs[i].Tier < c.Langs[j].Tier })
-	for i := range c.Langs {
-		c.LangByID[c.Langs[i].ID] = &c.Langs[i]
 	}
 	var reserved []string
 	if err := readYAML(filepath.Join(root, "registers", "reserved.yaml"), &reserved); err != nil {
@@ -161,6 +183,33 @@ func Load(root string) (*Corpus, error) {
 	return c, nil
 }
 
+// languageTrees adds a sub-area languages/<lang> for each language of the register, with the sub-areas of the template under it (spec 05.3). It does nothing when the topic tree has no area "languages".
+func (c *Corpus) languageTrees() {
+	var top *Area
+	for i := range c.Areas {
+		if c.Areas[i].ID == "languages" {
+			top = &c.Areas[i]
+		}
+	}
+	if top == nil {
+		return
+	}
+	have := map[string]bool{}
+	for _, a := range top.Children {
+		have[a.ID] = true
+	}
+	for _, l := range c.Langs {
+		if have[l.ID] {
+			continue
+		}
+		tree := Area{ID: l.ID, Name: l.Name, Summary: "The guide to " + l.Name + "."}
+		for _, t := range c.Template {
+			tree.Children = append(tree.Children, Area{ID: t.ID, Name: t.Name, Summary: t.Summary})
+		}
+		top.Children = append(top.Children, tree)
+	}
+}
+
 // InArea returns the nodes whose primary area is path or is under path.
 func (c *Corpus) InArea(path string) []*Node {
 	var out []*Node
@@ -183,9 +232,12 @@ func (c *Corpus) Kind(kind string) []*Node {
 	return out
 }
 
-// Solvers returns the nodes with a `solves` edge to the problem.
+// Solvers returns the nodes that solve a task. A task holds its own solutions (spec 10.1), so the task is first. The nodes with a `solves` edge to the task come after it.
 func (c *Corpus) Solvers(problem string) []*Node {
 	var out []*Node
+	if t := c.BySlug[problem]; t != nil && t.Kind == "task" {
+		out = append(out, t)
+	}
 	for _, n := range c.Nodes {
 		for _, s := range n.Solves {
 			if s.Problem == problem {

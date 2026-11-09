@@ -33,32 +33,33 @@ func buildTest(t *testing.T) string {
 func TestBuild(t *testing.T) {
 	out := buildTest(t)
 	for _, f := range []string{
-		"index.html", "404.html", "binary-search/index.html", "search-in-sorted-array/index.html",
-		"searching/index.html", "spec/index.html", "search.json", "sitemap.xml", "robots.txt",
+		"index.html", "404.html", "search-a-sorted-list/index.html", "closures/index.html",
+		"python/index.html", "python/closures-and-nonlocal/index.html", "python/3.14/index.html",
+		"python/functions/index.html", "data-and-values/index.html", "tasks/index.html", "spec/index.html", "search.json", "sitemap.xml", "robots.txt",
 		"opensearch.xml", "assets/site.css", "assets/player.js",
 	} {
 		if _, err := os.Stat(filepath.Join(out, f)); err != nil {
 			t.Errorf("%s is missing", f)
 		}
 	}
-	page, err := os.ReadFile(filepath.Join(out, "binary-search/index.html"))
+	page, err := os.ReadFile(filepath.Join(out, "search-a-sorted-list/index.html"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	s := string(page)
 	for _, want := range []string{
-		"<title>Binary search",
+		"<title>Search a sorted list",
 		`id="see-it-run"`,
-		`data-scene="binary-search"`,
+		`data-scene="search-a-sorted-list"`,
 		`id="references"`,
-		"https://algorithm.tamnd.com/binary-search/",
+		"https://programming.tamnd.com/search-a-sorted-list/",
 	} {
 		if !strings.Contains(s, want) {
-			t.Errorf("the binary search page does not contain %q", want)
+			t.Errorf("the task page does not contain %q", want)
 		}
 	}
 	if strings.Count(s, `id="references"`) != 1 {
-		t.Error("the binary search page has more than one References section")
+		t.Error("the task page has more than one References section")
 	}
 }
 

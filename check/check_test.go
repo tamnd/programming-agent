@@ -58,7 +58,7 @@ func TestMissingSlug(t *testing.T) {
 	if err := os.CopyFS(root, os.DirFS("../testdata/corpus")); err != nil {
 		t.Fatal(err)
 	}
-	p := filepath.Join(root, "nodes/searching/sequential-and-binary-search/binary-search/node.md")
+	p := filepath.Join(root, "nodes/data-and-values/collections/search-a-sorted-list/node.md")
 	data, err := os.ReadFile(p)
 	if err != nil {
 		t.Fatal(err)
@@ -84,7 +84,7 @@ func TestBuildFile(t *testing.T) {
 	if err := os.CopyFS(root, os.DirFS("../testdata/corpus")); err != nil {
 		t.Fatal(err)
 	}
-	p := filepath.Join(root, "nodes", "searching", "sequential-and-binary-search", "binary-search", "impl", "go", "go.mod")
+	p := filepath.Join(root, "nodes", "data-and-values", "collections", "search-a-sorted-list", "impl", "go", "go.mod")
 	if err := os.WriteFile(p, []byte("module x\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

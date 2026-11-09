@@ -1,4 +1,4 @@
-// Package check runs the audit rules of spec 13.3 that `prog check` needs.
+// Package check runs the audit rules of spec 15.3 that `prog check` needs.
 //
 // Each rule has an id, such as T01. A rule with the severity "block" stops a merge. A rule with the severity "level" keeps a part below the level that needs it. A rule with the severity "warn" only reports.
 package check
@@ -49,9 +49,9 @@ func (f Finding) String() string {
 
 // Rules lists the rules that this package runs, with their text.
 var Rules = map[string]string{
-	"T01": "node.md front matter is valid for its kind",
+	"T01": "node.md front matter is valid for its kind, and an owned kind names its owner",
 	"T02": "each tag is in registers/tags.reg, once, with its slug",
-	"T03": "each slug is unique, lowercase kebab-case, at most 60 characters, and not an old slug in aliases.reg",
+	"T03": "each slug is unique, has the form of its kind, and is not an old slug in aliases.reg",
 	"T04": "the path of the node matches its area",
 	"T05": "no status, level or badge is written in front matter",
 	"T06": "no provisional id is left on main",
@@ -85,7 +85,7 @@ var Rules = map[string]string{
 	"L07": "the model is total and computable",
 	"L09": "the module path mirrors the node path",
 	"L10": "each module builds in at most 60 seconds; prog lean build -time reports it, and a module above 300 seconds blocks",
-	"X01": "each link in a node to /<slug>/ names a node, an area or a site page",
+	"X01": "each link in a node to /<slug>/ or /<owner>/<slug>/ names a node, an area or a site page",
 	"X06": "no node slug is a reserved word, a language id or an area id",
 }
 
@@ -186,7 +186,6 @@ func rel(root, s string) string {
 }
 
 var (
-	slugRE   = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 	tagRE    = regexp.MustCompile(`^[0-9A-HJKMNP-TV-Z]{6}$`) // Crockford base32: no I, L, O, U
 	provRE   = regexp.MustCompile(`^NEW-[a-z0-9-]+$`)
 	idLineRE = regexp.MustCompile(`^(L\d+)\s`)
@@ -199,7 +198,7 @@ func (r *run) front(n *node.Node) {
 		r.add("T05", Block, p, 0, "the front matter has the key %q; the build computes it (04.8)", k)
 	}
 	req := map[string]string{"kind": n.Kind, "slug": n.Slug, "name": n.Name, "summary": n.Summary}
-	if n.Kind != "person" && n.Kind != "exercise" {
+	if n.Kind != "person" && n.Kind != "organization" && n.Kind != "work" && n.Kind != "exercise" {
 		req["area"] = n.Area
 		req["level"] = n.Level
 	}
@@ -217,31 +216,50 @@ func (r *run) front(n *node.Node) {
 	if len(n.Summary) > 200 {
 		r.add("T01", Block, p, 0, "the summary has %d characters; the limit is 200", len(n.Summary))
 	}
-	if !slugRE.MatchString(n.Slug) || len(n.Slug) > 60 {
-		r.add("T03", Block, p, 0, "the slug %q is not lowercase kebab-case of at most 60 characters", n.Slug)
+	owned := node.IsOwned(n.Kind)
+	switch {
+	case owned && n.Owner == "":
+		r.add("T01", Block, p, 0, "a %s names its owner in the field owner (04.3)", n.Kind)
+	case !owned && n.Owner != "":
+		r.add("T01", Block, p, 0, "a %s has a global slug and no owner (04.3)", n.Kind)
+	case owned && r.c.BySlug[n.Owner] == nil && r.c.LangByID[n.Owner] == nil:
+		r.add("G05", Block, p, 0, "owner: no node or language has the slug %q", n.Owner)
 	}
-	if filepath.Base(n.Rel) != n.Slug {
-		r.add("T04", Block, p, 0, "the directory is %q but the slug is %q", filepath.Base(n.Rel), n.Slug)
+	if !node.LocalOK(n.Kind, n.Local) {
+		r.add("T03", Block, p, 0, "the slug %q does not have the form of a %s (04.3)", n.Local, n.Kind)
+	}
+	if filepath.Base(n.Rel) != n.Local {
+		r.add("T04", Block, p, 0, "the directory is %q but the slug is %q", filepath.Base(n.Rel), n.Local)
 	}
 	if n.Area != "" {
 		if _, ok := r.c.AreaByID[n.Area]; !ok {
-			r.add("T04", Block, p, 0, "the area %q is not in topics/areas.yaml", n.Area)
-		} else if want := "nodes/" + n.Area + "/" + n.Slug; filepath.ToSlash(n.Rel) != want {
+			r.add("T04", Block, p, 0, "the area %q is not in topics/areas.yaml or a language tree", n.Area)
+		} else if want := "nodes/" + n.Area + "/" + n.Local; filepath.ToSlash(n.Rel) != want {
 			r.add("T04", Block, p, 0, "the node is at %s but its area puts it at %s", n.Rel, want)
 		}
 	}
 	for _, a := range n.Areas {
 		if _, ok := r.c.AreaByID[a]; !ok {
-			r.add("T04", Block, p, 0, "the secondary area %q is not in topics/areas.yaml", a)
+			r.add("T04", Block, p, 0, "the secondary area %q is not in topics/areas.yaml or a language tree", a)
 		}
 	}
-	if r.c.Reserved[n.Slug] || r.c.LangByID[n.Slug] != nil {
-		r.add("X06", Block, p, 0, "the slug %q is a reserved word or a language id (14.2)", n.Slug)
+	if n.Kind == "language" {
+		if r.c.LangByID[n.Slug] == nil {
+			r.add("T01", Block, p, 0, "the language %q is not in registers/languages.yaml (08.2)", n.Slug)
+		}
+		if n.Area != "languages" {
+			r.add("T04", Block, p, 0, "a language node has the area languages, and its directory is nodes/languages/%s", n.Slug)
+		}
 	}
-	for _, a := range r.c.AreaByID {
-		if a.ID == n.Slug {
-			r.add("X06", Block, p, 0, "the slug %q is the id of an area, and the area page uses the same URL (14.2)", n.Slug)
-			break
+	if !owned {
+		if r.c.Reserved[n.Slug] || (r.c.LangByID[n.Slug] != nil && n.Kind != "language") {
+			r.add("X06", Block, p, 0, "the slug %q is a reserved word or a language id (16.2)", n.Slug)
+		}
+		for _, a := range r.c.AreaByID {
+			if a.URL() == "/"+n.Slug+"/" && n.Kind != "language" {
+				r.add("X06", Block, p, 0, "the slug %q is the id of an area, and the area page uses the same URL (16.2)", n.Slug)
+				break
+			}
 		}
 	}
 	switch {
@@ -334,6 +352,12 @@ func (r *run) edges(n *node.Node) {
 	for _, s := range n.SeeAlso {
 		r.target(n, "see_also", s)
 	}
+	for _, s := range n.Realizes {
+		r.target(n, "realizes", s, "concept")
+	}
+	for _, s := range n.Related {
+		r.target(n, "related", s)
+	}
 	for _, s := range n.People {
 		r.target(n, "people", s, "person")
 	}
@@ -421,17 +445,18 @@ func (r *run) complexity(n *node.Node) {
 }
 
 // Order lists the headings of each kind in their order (spec 06.3).
-var Order = map[string][]string{
-	"algorithm":      {"In plain words", "The problem", "The algorithm", "Example", "Correctness", "Complexity", "Properties", "Variants and improvements", "When to use it", "Pitfalls", "Implementations", "Formal proof", "History", "Exercises", "References"},
-	"data-structure": {"In plain words", "The abstract type", "Representation", "Operations", "Example", "Correctness", "Complexity", "Variants", "When to use it", "Pitfalls", "Implementations", "Formal proof", "History", "Exercises", "References"},
-	"problem":        {"In plain words", "Definition", "Variants", "Examples", "Known algorithms", "Bounds", "Reductions", "Applications", "References"},
-	"abstract-type":  {"In plain words", "Operations", "Laws", "Implementations", "Lower bounds", "References"},
-	"technique":      {"In plain words", "When it applies", "The template", "Classic examples", "Variations", "Pitfalls", "Exercises", "References"},
-	"concept":        {"In plain words", "The idea", "Examples", "Where it is used", "References"},
-	"definition":     {"Definition", "Examples and non-examples", "Related definitions", "References"},
-	"model":          {"The machine", "What it counts", "Relation to other models", "Known results in the model", "References"},
-	"theorem":        {"Statement", "In plain words", "Proof", "Consequences", "Tightness", "History", "References"},
-}
+var Order = func() map[string][]string {
+	out := map[string][]string{}
+	for _, k := range node.KindList {
+		for _, s := range k.Sections {
+			out[k.ID] = append(out[k.ID], s.Name)
+		}
+	}
+	return out
+}()
+
+// Filled are the sections that the build fills. An empty heading only marks the place.
+var Filled = map[string]bool{"References": true, "In languages": true, "The guide": true, "Versions": true, "Versions and support": true, "Comparison": true, "Support dates": true, "Alternatives": true, "Implementations": true}
 
 func (r *run) sections(n *node.Node) {
 	order, ok := Order[n.Kind]
@@ -440,8 +465,6 @@ func (r *run) sections(n *node.Node) {
 	}
 	p := n.Rel + "/node.md"
 	last := -1
-	// The build fills these sections, so an empty heading only marks the place.
-	filled := map[string]bool{"Implementations": true, "Known algorithms": true, "References": true}
 	for _, h := range status.Sections(n.Body) {
 		i := slices.Index(order, h)
 		if i < 0 {
@@ -451,7 +474,7 @@ func (r *run) sections(n *node.Node) {
 		if i < last {
 			r.add("W01", Warn, p, 0, "the heading %q must come before %q", h, order[last])
 		}
-		if status.Section(n.Body, h) == "" && !filled[h] {
+		if status.Section(n.Body, h) == "" && !Filled[h] {
 			r.add("W01", Warn, p, 0, "the section %q is empty; leave it out", h)
 		}
 		last = max(last, i)
@@ -611,6 +634,13 @@ func (r *run) links(n *node.Node) {
 		body string
 		line int
 	}{{n.Rel + "/node.md", n.Body, n.BodyLine}}
+	for _, ex := range n.Examples {
+		files = append(files, struct {
+			path string
+			body string
+			line int
+		}{ex.Path, ex.Body, ex.Line})
+	}
 	for _, pr := range n.Proofs {
 		files = append(files, struct {
 			path string
@@ -621,8 +651,7 @@ func (r *run) links(n *node.Node) {
 	for _, f := range files {
 		for _, m := range linkRE.FindAllStringSubmatchIndex(f.body, -1) {
 			target := f.body[m[2]:m[3]]
-			parts := strings.Split(strings.Trim(target, "/"), "/")
-			if target == "/" || len(parts) != 1 || r.known(parts[0]) {
+			if target == "/" || r.known(strings.Trim(target, "/")) {
 				continue
 			}
 			line := 0
@@ -634,14 +663,22 @@ func (r *run) links(n *node.Node) {
 	}
 }
 
+// known tells if a link path names a node, an area or a site page. A path under a reserved word, such as /spec/04-object-model/, is a site page that prog site check checks. A path with more than one part that does not start with a node is outside the scope of the audit.
 func (r *run) known(x string) bool {
-	if r.c.BySlug[x] != nil || r.c.Reserved[x] {
+	if r.c.BySlug[x] != nil {
 		return true
 	}
 	for _, a := range r.c.AreaByID {
-		if a.ID == x {
+		if a.URL() == "/"+x+"/" {
 			return true
 		}
+	}
+	first, _, multi := strings.Cut(x, "/")
+	if r.c.Reserved[first] {
+		return true
+	}
+	if multi {
+		return r.c.BySlug[first] == nil && r.c.LangByID[first] == nil
 	}
 	return false
 }
