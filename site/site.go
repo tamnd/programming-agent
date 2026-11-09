@@ -600,17 +600,16 @@ const headers = `/*
   Content-Type: text/plain; charset=utf-8
 `
 
-// redirects returns the rules of _redirects and the map of the other moved paths. Pages reads at most 2,000 rules without a placeholder and 100 with one. The rules hold the old sub-pages and the old slugs of registers/aliases.reg. The tags and the aliases of the nodes are more than 2,000, so they go to /api/moved.json, and the 404 page sends the reader on with the map.
+// redirects returns the rules of _redirects and the map of the other moved paths. The host reads at most 2,000 rules without a placeholder and 100 with one. The rules hold the old sub-pages and the old slugs of registers/aliases.reg. The tags and the aliases of the nodes are more than 2,000, so they go to /api/moved.json, and the 404 page sends the reader on with the map.
 func (b *builder) redirects() (string, map[string]string) {
 	var s strings.Builder
 	moved := map[string]string{}
-	// The code of each language and every proof are on the node page, so the old sub-pages go to their part of it. These rules come first, so that no other rule hides them.
+	// /<slug>/<lang>/ goes to the tab of the language on the node page (spec 16.2). The host reads at most 100 rules with a placeholder, so there is one rule for each language that a node uses, not for each language of the register. These rules come first, so that no other rule hides them.
 	for _, l := range b.c.Langs {
-		fmt.Fprintf(&s, "/:slug/%s/ /:slug/#code-%s 301\n", l.ID, l.ID)
-		fmt.Fprintf(&s, "/:slug/%s /:slug/#code-%s 301\n", l.ID, l.ID)
-		fmt.Fprintf(&s, "/:slug/%s.txt /:slug/#code-%s 301\n", l.ID, l.ID)
+		if b.langUsed(l.ID) {
+			fmt.Fprintf(&s, "/:slug/%s/ /:slug/#code-%s 301\n", l.ID, l.ID)
+		}
 	}
-	s.WriteString("/:slug/proof/ /:slug/#proofs 301\n/:slug/proof /:slug/#proofs 301\n")
 	for _, n := range b.c.Nodes {
 		if n.Tag != "" {
 			moved["/t/"+n.Tag] = "/" + n.Slug + "/"
@@ -647,6 +646,16 @@ func (b *builder) redirects() (string, map[string]string) {
 		}
 	}
 	return s.String(), moved
+}
+
+// langUsed tells if a node has code or an example in the language.
+func (b *builder) langUsed(id string) bool {
+	for _, n := range b.c.Nodes {
+		if n.Lang(id) != nil || n.Example(id) != nil {
+			return true
+		}
+	}
+	return false
 }
 
 var nonSlug = regexp.MustCompile(`[^a-z0-9]+`)

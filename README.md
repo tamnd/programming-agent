@@ -34,7 +34,7 @@ Run these commands in a clone of tamnd/programming.
 | `prog status closures` | Shows the ladders of a node and what the next level needs. |
 | `prog site serve` | Renders the site and serves it on your computer. It renders again when a file changes. |
 | `prog site check` | Renders the site and checks each internal link. |
-| `prog site deploy` | Renders the site, checks the limits of Cloudflare Pages and uploads the tree with a pinned wrangler. It reads `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the environment and does not print them. |
+| `prog site deploy` | Renders the site, checks the limits of the host and uploads the tree as the static assets of the Cloudflare Worker `programming` with a pinned wrangler. With `-preview`, it uploads a version with a preview alias and does not change production. It reads `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` from the environment and does not print them. |
 
 `prog help` shows all commands. A command that is planned but not built yet exits with code 3 and names its milestone.
 
