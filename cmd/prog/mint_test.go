@@ -24,8 +24,8 @@ func TestMint(t *testing.T) {
 	tagSource = bytes.NewReader(bytes.Repeat([]byte{7, 1, 200, 33, 90, 14, 250, 3}, 64))
 	t.Cleanup(func() { tagSource = cryptoSource })
 	root := copyCorpus(t)
-	for _, s := range []string{"heap-sort", "shell-sort"} {
-		if got := run([]string{"new", "algorithm", s, "-area", "sorting/comparison-sorts", "-root", root}); got != 0 {
+	for _, s := range []string{"currying", "partial-application"} {
+		if got := run([]string{"new", "concept", s, "-area", "functions-and-abstraction/closures-and-scope", "-root", root}); got != 0 {
 			t.Fatalf("prog new %s exits with %d", s, got)
 		}
 	}
@@ -41,8 +41,8 @@ func TestMint(t *testing.T) {
 		t.Fatalf("prog mint exits with %d", got)
 	}
 	tagRE := regexp.MustCompile(`(?m)^tag: ([0-9A-HJKMNP-TV-Z]{6})$`)
-	for _, s := range []string{"heap-sort", "shell-sort"} {
-		b, err := os.ReadFile(filepath.Join(root, "nodes/sorting/comparison-sorts", s, "node.md"))
+	for _, s := range []string{"currying", "partial-application"} {
+		b, err := os.ReadFile(filepath.Join(root, "nodes/functions-and-abstraction/closures-and-scope", s, "node.md"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -90,7 +90,7 @@ func TestMintSkipsUsedTags(t *testing.T) {
 
 func TestFmt(t *testing.T) {
 	root := copyCorpus(t)
-	p := filepath.Join(root, "nodes/searching/sequential-and-binary-search/binary-search/node.md")
+	p := filepath.Join(root, "nodes/data-and-values/collections/search-a-sorted-list/node.md")
 	b, err := os.ReadFile(p)
 	if err != nil {
 		t.Fatal(err)

@@ -75,7 +75,7 @@ type Meta struct {
 
 // Counts are the numbers of the home page.
 type Counts struct {
-	Nodes, Algorithms, Structures, Problems, Impls, Langs, Proofs, Scenes, Areas int
+	Nodes, Concepts, Languages, Features, Tasks, Examples, Impls, Langs, Proofs, Scenes, Areas int
 }
 
 // Link is a link with a name.
@@ -195,7 +195,7 @@ func build(c *node.Corpus, opt Options) (*Report, error) {
 	for _, n := range c.Nodes {
 		b.status[n.Slug] = status.Of(n, status.Env{Corpus: c, Results: b.results, VizChecked: b.vizChecked(), Decls: b.decls})
 	}
-	steps := []func() error{b.nodes, b.home, b.areas, b.problems, b.kinds, b.gallery, b.languages, b.matrix, b.pages, b.spec, b.machine}
+	steps := []func() error{b.nodes, b.home, b.areas, b.tasks, b.kinds, b.gallery, b.languages, b.matrix, b.pages, b.spec, b.machine}
 	for _, f := range steps {
 		if err := f(); err != nil {
 			return nil, err
@@ -236,13 +236,16 @@ func (b *builder) counts() {
 	for _, n := range b.c.Nodes {
 		k.Nodes++
 		switch n.Kind {
-		case "algorithm":
-			k.Algorithms++
-		case "data-structure":
-			k.Structures++
-		case "problem":
-			k.Problems++
+		case "concept":
+			k.Concepts++
+		case "language":
+			k.Languages++
+		case "feature":
+			k.Features++
+		case "task":
+			k.Tasks++
 		}
+		k.Examples += len(n.Examples)
 		k.Impls += len(n.Impls)
 		for _, im := range n.Impls {
 			langs[im.Lang] = true
@@ -293,13 +296,13 @@ func comma(n int) string {
 	return s
 }
 
-var kindNames = map[string][2]string{
-	"area": {"area", "areas"}, "concept": {"concept", "concepts"}, "definition": {"definition", "definitions"},
-	"model": {"model", "models"}, "problem": {"problem", "problems"}, "abstract-type": {"abstract type", "abstract types"},
-	"algorithm": {"algorithm", "algorithms"}, "data-structure": {"data structure", "data structures"},
-	"technique": {"technique", "techniques"}, "theorem": {"theorem", "theorems"}, "exercise": {"exercise", "exercises"},
-	"person": {"person", "people"},
-}
+var kindNames = func() map[string][2]string {
+	out := map[string][2]string{}
+	for _, k := range node.KindList {
+		out[k.ID] = [2]string{k.One, k.Many}
+	}
+	return out
+}()
 
 func kindName(k string, many ...bool) string {
 	n, ok := kindNames[k]
@@ -376,7 +379,7 @@ func (b *builder) resolve(slug string) (string, string, bool) {
 		return n.Name, "/" + n.Slug + "/", true
 	}
 	if a := b.area(slug); a != nil {
-		return a.Name, "/" + a.ID + "/", true
+		return a.Name, a.URL(), true
 	}
 	return "", "", false
 }
@@ -408,7 +411,7 @@ func (b *builder) link(slug string) Link {
 		return Link{Name: n.Name, URL: "/" + n.Slug + "/", Kind: n.Kind, Hue: b.hueOf(n.Area)}
 	}
 	if a := b.area(slug); a != nil {
-		return Link{Name: a.Name, URL: "/" + a.ID + "/", Kind: "area", Hue: b.hueOf(a.Path())}
+		return Link{Name: a.Name, URL: a.URL(), Kind: "area", Hue: b.hueOf(a.Path())}
 	}
 	return Link{Name: humanize(slug), URL: "/" + slug + "/", Missing: true, Note: "This page does not exist yet."}
 }
@@ -439,13 +442,10 @@ func (b *builder) hueOf(area string) int {
 
 func (b *builder) crumbs(n *node.Node) []Link {
 	var out []Link
-	top, sub, hasSub := strings.Cut(n.Area, "/")
-	if a := b.c.AreaByID[top]; a != nil {
-		out = append(out, Link{Name: a.Name, URL: "/" + a.ID + "/"})
-	}
-	if hasSub {
-		if a := b.c.AreaByID[top+"/"+sub]; a != nil {
-			out = append(out, Link{Name: a.Name, URL: "/" + a.ID + "/"})
+	parts := strings.Split(n.Area, "/")
+	for i := range parts {
+		if a := b.c.AreaByID[strings.Join(parts[:i+1], "/")]; a != nil {
+			out = append(out, Link{Name: a.Name, URL: a.URL()})
 		}
 	}
 	out = append(out, Link{Name: title(kindName(n.Kind)), URL: "/kind/" + n.Kind + "/"})

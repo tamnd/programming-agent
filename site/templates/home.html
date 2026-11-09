@@ -1,15 +1,14 @@
 {{define "main"}}<div class="home">
 <section class="hero">
-<h1>Algorithms, explained, proved and run.</h1>
-<p class="lead">Each page explains one algorithm or idea in plain words. It gives the pseudocode, a proof that you can check, the cost, code with tests in many languages and a picture that you can step through.</p>
+<h1>Programming, explained and run.</h1>
+<p class="lead">Each page explains one idea, language feature, task or tool of programming in plain words. Each code example runs in a pinned toolchain, and its output on the page is the output of that run. Each fact names its source.</p>
 <a class="hero-search" href="/search/" data-palette><span>Search {{plural .Meta.Counts.Nodes "page" "pages"}}</span><kbd>⌘K</kbd></a>
 <ul class="stats">
-<li><b>{{comma .Meta.Counts.Algorithms}}</b> algorithms</li>
-<li><b>{{comma .Meta.Counts.Structures}}</b> data structures</li>
-<li><b>{{comma .Meta.Counts.Problems}}</b> problems</li>
-<li><b>{{comma .Meta.Counts.Proofs}}</b> proofs</li>
-<li><b>{{comma .Meta.Counts.Impls}}</b> implementations in {{.Meta.Counts.Langs}} languages</li>
-<li><b>{{comma .Meta.Counts.Scenes}}</b> scenes</li>
+<li><b>{{comma .Meta.Counts.Concepts}}</b> concepts</li>
+<li><b>{{comma .Meta.Counts.Languages}}</b> languages</li>
+<li><b>{{comma .Meta.Counts.Features}}</b> language features</li>
+<li><b>{{comma .Meta.Counts.Tasks}}</b> tasks</li>
+<li><b>{{comma .Meta.Counts.Examples}}</b> example files</li>
 </ul>
 </section>
 {{with .Start}}<section class="band"><div class="band-head"><h2>Start here</h2><a href="/learn/">The full reading path</a></div>{{template "items" .}}</section>{{end}}
@@ -20,8 +19,8 @@
 <h2>How a page earns trust</h2>
 <ol class="how-list">
 <li><b>Plain words.</b> The text uses short sentences and simple words. A reader who knows some code can follow it.</li>
-<li><b>Proof.</b> A human proof shows why the algorithm is correct. A Lean proof lets a computer check it.</li>
-<li><b>Tests.</b> Each implementation has native tests. The build runs them in a pinned toolchain.</li>
+<li><b>Code that runs.</b> The build runs each example and records its output. A version claim, such as "since Python 3.10", comes from a probe that the build runs on each version.</li>
+<li><b>Sources.</b> Each rule of a language cites the reference or the standard, at the version that it is about.</li>
 <li><b>Honest badges.</b> The build computes each badge from evidence. Nobody writes a badge by hand. <a href="/badges/">Read about the badges</a>.</li>
 </ol>
 </section>

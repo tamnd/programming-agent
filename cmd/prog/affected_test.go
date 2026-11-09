@@ -14,17 +14,17 @@ func TestFindAffected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bs := c.BySlug["binary-search"]
-	const dir = "nodes/searching/sequential-and-binary-search/"
+	bs := c.BySlug["search-a-sorted-list"]
+	const dir = "nodes/data-and-values/collections/search-a-sorted-list/"
 	cases := []struct {
 		name  string
 		files []string
 		all   bool
-		has   map[string]bool // lang of binary-search
+		has   map[string]bool // lang of search-a-sorted-list
 	}{
-		{"one go file", []string{dir + "binary-search/impl/go/binary_search.go"}, false, map[string]bool{"go": true, "python": false}},
-		{"node.md", []string{dir + "binary-search/node.md"}, false, map[string]bool{"go": true, "python": true}},
-		{"a case file", []string{dir + "search-in-sorted-array/cases/basic.jsonl"}, false, map[string]bool{"go": true, "python": true}},
+		{"one go file", []string{dir + "impl/go/binary_search.go"}, false, map[string]bool{"go": true, "python": false}},
+		{"node.md", []string{dir + "node.md"}, false, map[string]bool{"go": true, "python": true}},
+		{"a case file", []string{dir + "cases/basic.jsonl"}, false, map[string]bool{"go": true, "python": true}},
 		{"a register", []string{"registers/languages.yaml"}, true, map[string]bool{"go": true, "python": true}},
 		{"the readme", []string{"README.md"}, false, map[string]bool{"go": false, "python": false}},
 	}
@@ -35,7 +35,7 @@ func TestFindAffected(t *testing.T) {
 		}
 		for l, want := range tc.has {
 			if got := a.Has(bs, l); got != want {
-				t.Errorf("%s: Has(binary-search, %s) = %v, want %v", tc.name, l, got, want)
+				t.Errorf("%s: Has(search-a-sorted-list, %s) = %v, want %v", tc.name, l, got, want)
 			}
 		}
 	}
@@ -46,7 +46,7 @@ func TestTestCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bs := c.BySlug["binary-search"]
+	bs := c.BySlug["search-a-sorted-list"]
 	im := *bs.Lang("go")
 	tc, err := newTestCache(t.TempDir(), corpus)
 	if err != nil {
@@ -65,13 +65,13 @@ func TestTestCache(t *testing.T) {
 	if k1 == tc.key("go1.27", bs, changed, nil) {
 		t.Error("the key does not change with a file")
 	}
-	if err := tc.Put("go", "bad", status.Test{Slug: "binary-search", Pass: false}); err != nil {
+	if err := tc.Put("go", "bad", status.Test{Slug: "search-a-sorted-list", Pass: false}); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := tc.Get("go", "bad"); ok {
 		t.Error("a failed result is in the cache")
 	}
-	good := status.Test{Slug: "binary-search", Lang: "go", Pass: true}
+	good := status.Test{Slug: "search-a-sorted-list", Lang: "go", Pass: true}
 	if err := tc.Put("go", k1, good); err != nil {
 		t.Fatal(err)
 	}

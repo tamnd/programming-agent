@@ -81,10 +81,11 @@ var slugRE = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
 // cmdNew makes nodes/<area>/<slug>/node.md with the sections of the kind (spec 06.3).
 func cmdNew(args []string) error {
-	f := newFlags("new", "-area <top/sub> [-name <name>] [<kind>] <slug>")
+	f := newFlags("new", "-area <top/sub> [-owner <owner>] [-name <name>] [<kind>] <slug>")
 	root := f.String("root", ".", "the root of the content repository")
-	kind := f.String("kind", "algorithm", "the kind of the node")
-	area := f.String("area", "", "the area path, for example sorting/comparison")
+	owner := f.String("owner", "", "the owner of a feature, release, diagnostic, proposal or api entry, such as python")
+	kind := f.String("kind", "concept", "the kind of the node")
+	area := f.String("area", "", "the area path, for example functions-and-abstraction/closures-and-scope")
 	name := f.String("name", "", "the display name; the default comes from the slug")
 	level := f.String("level", "core", "the level: intro, core, advanced or research")
 	if err := parse(f, args); err != nil {
@@ -99,12 +100,19 @@ func cmdNew(args []string) error {
 	default:
 		return usageError{"give a slug, or a kind and a slug"}
 	}
-	if !slugRE.MatchString(slug) || len(slug) > 60 {
-		return usageError{fmt.Sprintf("%q is not lowercase kebab-case of at most 60 characters", slug)}
-	}
 	if !node.IsKind(*kind) {
 		return usageError{fmt.Sprintf("%q is not a kind; use one of %s", *kind, strings.Join(node.Kinds, ", "))}
 	}
+	if !node.LocalOK(*kind, slug) {
+		return usageError{fmt.Sprintf("%q is not a slug of the form of a %s; most slugs are lowercase kebab-case of at most 60 characters", slug, *kind)}
+	}
+	if node.IsOwned(*kind) != (*owner != "") {
+		if *owner == "" {
+			return usageError{fmt.Sprintf("a %s needs an owner; give it with -owner", *kind)}
+		}
+		return usageError{fmt.Sprintf("a %s has no owner; remove -owner", *kind)}
+	}
+	full := node.FullSlug(*kind, *owner, slug)
 	if *area == "" {
 		return usageError{"give the area with -area"}
 	}
@@ -115,10 +123,10 @@ func cmdNew(args []string) error {
 	if _, ok := c.AreaByID[*area]; !ok {
 		return usageError{fmt.Sprintf("the area %q is not in topics/areas.yaml", *area)}
 	}
-	if c.BySlug[slug] != nil {
-		return fmt.Errorf("the slug %q is used by %s", slug, c.BySlug[slug].Rel)
+	if c.BySlug[full] != nil {
+		return fmt.Errorf("the slug %q is used by %s", full, c.BySlug[full].Rel)
 	}
-	if c.Reserved[slug] || c.LangByID[slug] != nil || c.AreaByID[slug] != nil {
+	if *owner == "" && (c.Reserved[slug] || c.LangByID[slug] != nil || c.AreaByID[slug] != nil) {
 		return fmt.Errorf("the slug %q is a reserved word, a language id or an area id", slug)
 	}
 	dir := filepath.Join(*root, "nodes", filepath.FromSlash(*area), slug)
@@ -129,7 +137,16 @@ func cmdNew(args []string) error {
 		*name = strings.ToUpper(slug[:1]) + strings.ReplaceAll(slug[1:], "-", " ")
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "---\ntag: NEW-%s\nkind: %s\nslug: %s\nname: %s\narea: %s\nlevel: %s\nsummary: >-\n  Write one sentence that says what this is.\n---\n\n", slug, *kind, slug, *name, *area, *level)
+	fmt.Fprintf(&b, "---\ntag: NEW-%s\nkind: %s\n", strings.ToLower(strings.NewReplacer("/", "-", ".", "-", "_", "-").Replace(full)), *kind)
+	if *owner != "" {
+		fmt.Fprintf(&b, "owner: %s\n", *owner)
+	}
+	if *kind == "release" {
+		fmt.Fprintf(&b, "version: %q\n", slug)
+	} else {
+		fmt.Fprintf(&b, "slug: %s\n", slug)
+	}
+	fmt.Fprintf(&b, "name: %s\narea: %s\nlevel: %s\nsummary: >-\n  Write one sentence that says what this is.\n---\n\n", *name, *area, *level)
 	for _, h := range check.Order[*kind] {
 		fmt.Fprintf(&b, "## %s\n\n", h)
 		if h == "The algorithm" {

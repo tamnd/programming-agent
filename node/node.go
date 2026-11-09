@@ -1,4 +1,4 @@
-// Package node reads the node directories of tamnd/algorithm (spec 04.3 and 04.4).
+// Package node reads the node directories of tamnd/programming (spec 04.3 and 04.4).
 package node
 
 import (
@@ -14,17 +14,6 @@ import (
 
 	"go.yaml.in/yaml/v3"
 )
-
-// Kinds are the 12 node kinds of spec 04.1.
-var Kinds = []string{
-	"area", "concept", "definition", "model", "problem", "abstract-type",
-	"algorithm", "data-structure", "technique", "theorem", "exercise", "person",
-}
-
-// IsKind tells if k is one of the 12 kinds.
-func IsKind(k string) bool {
-	return slices.Contains(Kinds, k)
-}
 
 // Levels are the editorial levels of spec 05.5.
 var Levels = []string{"intro", "core", "advanced", "research"}
@@ -62,22 +51,42 @@ type Complexity struct {
 
 // History says where a node comes from.
 type History struct {
-	Year   int      `yaml:"year,omitempty" json:"year,omitempty"`
-	People []string `yaml:"people,omitempty" json:"people,omitempty"`
-	Note   string   `yaml:"note,omitempty" json:"note,omitempty"`
+	Year   int            `yaml:"year,omitempty" json:"year,omitempty"`
+	People []string       `yaml:"people,omitempty" json:"people,omitempty"`
+	First  map[string]any `yaml:"first,omitempty" json:"first,omitempty"`
+	Note   string         `yaml:"note,omitempty" json:"note,omitempty"`
 }
 
-// Source is one entry of `sources`.
+// Source is one entry of `sources`. A source names a work of registers/works.yaml, a book, a paper or a URL, and a locator inside it (spec 04.5).
 type Source struct {
-	Book    string `yaml:"book,omitempty" json:"book,omitempty"`
-	URL     string `yaml:"url,omitempty" json:"url,omitempty"`
-	Paper   string `yaml:"paper,omitempty" json:"paper,omitempty"`
-	Title   string `yaml:"title,omitempty" json:"title,omitempty"`
-	Locator string `yaml:"locator,omitempty" json:"locator,omitempty"`
-	Note    string `yaml:"note,omitempty" json:"note,omitempty"`
+	Work     string `yaml:"work,omitempty" json:"work,omitempty"`
+	Book     string `yaml:"book,omitempty" json:"book,omitempty"`
+	URL      string `yaml:"url,omitempty" json:"url,omitempty"`
+	Paper    string `yaml:"paper,omitempty" json:"paper,omitempty"`
+	Title    string `yaml:"title,omitempty" json:"title,omitempty"`
+	Locator  string `yaml:"locator,omitempty" json:"locator,omitempty"`
+	Accessed string `yaml:"accessed,omitempty" json:"accessed,omitempty"`
+	Note     string `yaml:"note,omitempty" json:"note,omitempty"`
 }
 
-// Front is the front matter of node.md. The schema is schema/node.v1.json in tamnd/algorithm.
+// Lit is a list of strings that also accepts one string, such as `languages: tier-1+2`.
+type Lit []string
+
+// UnmarshalYAML accepts a scalar or a sequence.
+func (l *Lit) UnmarshalYAML(n *yaml.Node) error {
+	if n.Kind == yaml.ScalarNode {
+		*l = Lit{n.Value}
+		return nil
+	}
+	var v []string
+	if err := n.Decode(&v); err != nil {
+		return err
+	}
+	*l = v
+	return nil
+}
+
+// Front is the front matter of node.md (spec 04.5). The schema is schema/node.v1.json in tamnd/programming. A field that does not apply to a kind is absent.
 type Front struct {
 	Tag         string            `yaml:"tag" json:"tag"`
 	Kind        string            `yaml:"kind" json:"kind"`
@@ -106,6 +115,107 @@ type Front struct {
 	Exercises   []string          `yaml:"exercises,omitempty" json:"exercises,omitempty"`
 	People      []string          `yaml:"people,omitempty" json:"people,omitempty"`
 	SeeAlso     []string          `yaml:"see_also,omitempty" json:"see_also,omitempty"`
+
+	// Owner is the language, tool or library that owns a feature, release, diagnostic, proposal or api node (spec 04.3).
+	Owner string `yaml:"owner,omitempty" json:"owner,omitempty"`
+
+	// concept
+	AppliesTo string `yaml:"applies_to,omitempty" json:"applies_to,omitempty"`
+	Viz       string `yaml:"viz,omitempty" json:"viz,omitempty"`
+	Formal    string `yaml:"formal,omitempty" json:"formal,omitempty"`
+
+	// language
+	Class          string         `yaml:"class,omitempty" json:"class,omitempty"`
+	Tier           int            `yaml:"tier,omitempty" json:"tier,omitempty"`
+	Paradigms      []string       `yaml:"paradigms,omitempty" json:"paradigms,omitempty"`
+	Typing         map[string]any `yaml:"typing,omitempty" json:"typing,omitempty"`
+	Memory         string         `yaml:"memory,omitempty" json:"memory,omitempty"`
+	Execution      []string       `yaml:"execution,omitempty" json:"execution,omitempty"`
+	Appeared       int            `yaml:"appeared,omitempty" json:"appeared,omitempty"`
+	Designers      []string       `yaml:"designers,omitempty" json:"designers,omitempty"`
+	InfluencedBy   []string       `yaml:"influenced_by,omitempty" json:"influenced_by,omitempty"`
+	Standard       string         `yaml:"standard,omitempty" json:"standard,omitempty"`
+	Reference      map[string]any `yaml:"reference,omitempty" json:"reference,omitempty"`
+	ReferenceImpl  string         `yaml:"licence_of_reference_impl,omitempty" json:"licence_of_reference_impl,omitempty"`
+	FileExtensions []string       `yaml:"file_extensions,omitempty" json:"file_extensions,omitempty"`
+	HelloWorld     string         `yaml:"hello_world,omitempty" json:"hello_world,omitempty"`
+
+	// feature
+	Realizes  []string       `yaml:"realizes,omitempty" json:"realizes,omitempty"`
+	Grammar   string         `yaml:"grammar,omitempty" json:"grammar,omitempty"`
+	Spec      map[string]any `yaml:"spec,omitempty" json:"spec,omitempty"`
+	Proposals []string       `yaml:"proposals,omitempty" json:"proposals,omitempty"`
+	Compat    string         `yaml:"compat,omitempty" json:"compat,omitempty"`
+	Since     string         `yaml:"since,omitempty" json:"since,omitempty"`
+
+	// release
+	Version    string           `yaml:"version,omitempty" json:"version,omitempty"`
+	Released   string           `yaml:"released,omitempty" json:"released,omitempty"`
+	EOL        string           `yaml:"eol,omitempty" json:"eol,omitempty"`
+	Patches    []map[string]any `yaml:"patches,omitempty" json:"patches,omitempty"`
+	Adds       []string         `yaml:"adds,omitempty" json:"adds,omitempty"`
+	Removes    []string         `yaml:"removes,omitempty" json:"removes,omitempty"`
+	Deprecates []string         `yaml:"deprecates,omitempty" json:"deprecates,omitempty"`
+	Notes      map[string]any   `yaml:"notes,omitempty" json:"notes,omitempty"`
+
+	// task
+	Contract       string              `yaml:"contract,omitempty" json:"contract,omitempty"`
+	Category       string              `yaml:"category,omitempty" json:"category,omitempty"`
+	Languages      Lit                 `yaml:"languages,omitempty" json:"languages,omitempty"`
+	UsesFeatures   map[string][]string `yaml:"uses_features,omitempty" json:"uses_features,omitempty"`
+	UsesAlgorithms []string            `yaml:"uses_algorithms,omitempty" json:"uses_algorithms,omitempty"`
+
+	// pattern, technique and practice
+	Family       string            `yaml:"family,omitempty" json:"family,omitempty"`
+	Polarity     string            `yaml:"polarity,omitempty" json:"polarity,omitempty"`
+	Intent       string            `yaml:"intent,omitempty" json:"intent,omitempty"`
+	AlsoKnownAs  []string          `yaml:"also_known_as,omitempty" json:"also_known_as,omitempty"`
+	Related      []string          `yaml:"related,omitempty" json:"related,omitempty"`
+	BuiltIn      map[string]string `yaml:"languages_where_built_in,omitempty" json:"languages_where_built_in,omitempty"`
+	Refactorings []string          `yaml:"refactorings,omitempty" json:"refactorings,omitempty"`
+
+	// tool and library
+	Role               Lit            `yaml:"role,omitempty" json:"role,omitempty"`
+	ImplementsLanguage string         `yaml:"implements_language,omitempty" json:"implements_language,omitempty"`
+	Licence            string         `yaml:"licence,omitempty" json:"licence,omitempty"`
+	Repo               string         `yaml:"repo,omitempty" json:"repo,omitempty"`
+	Homepage           string         `yaml:"homepage,omitempty" json:"homepage,omitempty"`
+	FirstRelease       string         `yaml:"first_release,omitempty" json:"first_release,omitempty"`
+	AlternativeTo      []string       `yaml:"alternative_to,omitempty" json:"alternative_to,omitempty"`
+	Latest             map[string]any `yaml:"latest,omitempty" json:"latest,omitempty"`
+
+	// format and standard
+	MediaType  string   `yaml:"media_type,omitempty" json:"media_type,omitempty"`
+	Extensions []string `yaml:"extensions,omitempty" json:"extensions,omitempty"`
+	Specs      []string `yaml:"specs,omitempty" json:"specs,omitempty"`
+	Publisher  string   `yaml:"publisher,omitempty" json:"publisher,omitempty"`
+
+	// weakness
+	CWE               int      `yaml:"cwe,omitempty" json:"cwe,omitempty"`
+	Abstraction       string   `yaml:"abstraction,omitempty" json:"abstraction,omitempty"`
+	LanguagesAffected []string `yaml:"languages_affected,omitempty" json:"languages_affected,omitempty"`
+	OWASPTop10        string   `yaml:"owasp_top10_2025,omitempty" json:"owasp_top10_2025,omitempty"`
+	CWETop25          int      `yaml:"cwe_top25_2025,omitempty" json:"cwe_top25_2025,omitempty"`
+	DetectedBy        []string `yaml:"detected_by,omitempty" json:"detected_by,omitempty"`
+	Prevents          []string `yaml:"prevents,omitempty" json:"prevents,omitempty"`
+
+	// diagnostic, proposal and api, when they are promoted to nodes
+	Code     string   `yaml:"code,omitempty" json:"code,omitempty"`
+	Severity string   `yaml:"severity,omitempty" json:"severity,omitempty"`
+	Messages []string `yaml:"message_templates,omitempty" json:"message_templates,omitempty"`
+	Concepts []string `yaml:"concepts,omitempty" json:"concepts,omitempty"`
+	Features []string `yaml:"features,omitempty" json:"features,omitempty"`
+	Path     string   `yaml:"path,omitempty" json:"api_path,omitempty"`
+	Entity   string   `yaml:"entity,omitempty" json:"entity,omitempty"`
+	Module   string   `yaml:"module,omitempty" json:"module,omitempty"`
+
+	// work, person and organization
+	Authors []string `yaml:"authors,omitempty" json:"authors,omitempty"`
+	Year    int      `yaml:"year,omitempty" json:"year,omitempty"`
+	Born    string   `yaml:"born,omitempty" json:"born,omitempty"`
+	Died    string   `yaml:"died,omitempty" json:"died,omitempty"`
+	Founded string   `yaml:"founded,omitempty" json:"founded,omitempty"`
+	URL     string   `yaml:"url,omitempty" json:"url,omitempty"`
 }
 
 // File is one file of an implementation.
@@ -165,19 +275,30 @@ type Preset struct {
 	Note  string         `yaml:"note,omitempty" json:"note,omitempty"`
 }
 
+// Example is one file of examples/: the section of a concept or a feature for one language (spec 04.4).
+type Example struct {
+	Lang string `json:"lang"`
+	Path string `json:"path"`
+	Body string `json:"-"`
+	Line int    `json:"-"` // the line of the file where the body starts
+}
+
 // Node is one node directory.
 type Node struct {
 	Front
-	Body      string   `json:"-"`
-	BodyLine  int      `json:"-"` // the line of node.md where the body starts
-	Dir       string   `json:"-"`
-	Rel       string   `json:"path"` // the directory, relative to the root
-	RawFront  []byte   `json:"-"`
-	Forbidden []string `json:"-"` // front matter keys that rule T05 rejects
-	Impls     []Impl   `json:"impls,omitempty"`
-	Proofs    []Proof  `json:"proofs,omitempty"`
-	Scene     string   `json:"scene,omitempty"` // path of viz/scene.ts, relative to the root
-	Presets   []Preset `json:"presets,omitempty"`
+	// Local is the slug as the front matter writes it. For an owned kind, Slug is the full slug, such as python/match-statement, and Local is match-statement.
+	Local     string    `json:"local,omitempty"`
+	Examples  []Example `json:"examples,omitempty"`
+	Body      string    `json:"-"`
+	BodyLine  int       `json:"-"` // the line of node.md where the body starts
+	Dir       string    `json:"-"`
+	Rel       string    `json:"path"` // the directory, relative to the root
+	RawFront  []byte    `json:"-"`
+	Forbidden []string  `json:"-"` // front matter keys that rule T05 rejects
+	Impls     []Impl    `json:"impls,omitempty"`
+	Proofs    []Proof   `json:"proofs,omitempty"`
+	Scene     string    `json:"scene,omitempty"` // path of viz/scene.ts, relative to the root
+	Presets   []Preset  `json:"presets,omitempty"`
 }
 
 // Lang returns the implementation in a language, or nil.
@@ -191,7 +312,7 @@ func (n *Node) Lang(id string) *Impl {
 }
 
 // forbiddenKeys are status fields. The build computes them, and nobody writes them (rule T05).
-var forbiddenKeys = []string{"status", "ladder", "ladders", "badge", "badges", "evidence", "complete", "reviewed"}
+var forbiddenKeys = []string{"status", "ladder", "ladders", "badge", "badges", "evidence", "complete", "reviewed", "popularity"}
 
 // SplitFront splits a Markdown file into its YAML front matter and its body.
 // It returns the line number where the body starts.
@@ -231,24 +352,45 @@ func Read(root, dir string) (*Node, error) {
 	n.Rel, _ = filepath.Rel(root, dir)
 	n.Rel = filepath.ToSlash(n.Rel)
 
-	var raw map[string]any
-	if err := yaml.Unmarshal(front, &raw); err != nil {
+	// The forbidden keys come out of the YAML tree, not out of a map, so each scalar keeps its text: "3.10" stays "3.10".
+	var doc yaml.Node
+	if err := yaml.Unmarshal(front, &doc); err != nil {
 		return nil, fmt.Errorf("%s: front matter: %w", path, err)
 	}
-	for _, k := range forbiddenKeys {
-		if _, ok := raw[k]; ok {
-			n.Forbidden = append(n.Forbidden, k)
-			delete(raw, k)
+	if len(doc.Content) == 1 && doc.Content[0].Kind == yaml.MappingNode {
+		m := doc.Content[0]
+		var keep []*yaml.Node
+		for i := 0; i+1 < len(m.Content); i += 2 {
+			if slices.Contains(forbiddenKeys, m.Content[i].Value) {
+				n.Forbidden = append(n.Forbidden, m.Content[i].Value)
+				continue
+			}
+			keep = append(keep, m.Content[i], m.Content[i+1])
+		}
+		m.Content = keep
+		clean, err := yaml.Marshal(&doc)
+		if err != nil {
+			return nil, err
+		}
+		dec := yaml.NewDecoder(bytes.NewReader(clean))
+		dec.KnownFields(true)
+		if err := dec.Decode(&n.Front); err != nil && !errors.Is(err, io.EOF) {
+			return nil, fmt.Errorf("%s: front matter: %w", path, err)
 		}
 	}
-	clean, err := yaml.Marshal(raw)
-	if err != nil {
-		return nil, err
+	n.Local = n.Slug
+	if n.Local == "" && n.Kind == "release" {
+		n.Local = n.Version
 	}
-	dec := yaml.NewDecoder(bytes.NewReader(clean))
-	dec.KnownFields(true)
-	if err := dec.Decode(&n.Front); err != nil && !errors.Is(err, io.EOF) {
-		return nil, fmt.Errorf("%s: front matter: %w", path, err)
+	if n.Local == "" && n.Kind == "diagnostic" {
+		n.Local = n.Code
+	}
+	if n.Local == "" && n.Kind == "api" {
+		n.Local = n.Path
+	}
+	n.Slug = FullSlug(n.Kind, n.Owner, n.Local)
+	if err := readExamples(root, n); err != nil {
+		return nil, err
 	}
 
 	if err := readImpls(root, n); err != nil {
@@ -261,6 +403,42 @@ func Read(root, dir string) (*Node, error) {
 		return nil, err
 	}
 	return n, nil
+}
+
+// readExamples reads examples/<lang>.md. A file may start with a front matter block; the body is the part after it.
+func readExamples(root string, n *Node) error {
+	paths, err := filepath.Glob(filepath.Join(n.Dir, "examples", "*.md"))
+	if err != nil {
+		return err
+	}
+	sort.Strings(paths)
+	for _, p := range paths {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
+		ex := Example{Lang: strings.TrimSuffix(filepath.Base(p), ".md"), Body: string(b), Line: 1}
+		if bytes.HasPrefix(b, []byte("---\n")) {
+			if _, body, line, err := SplitFront(b); err == nil {
+				ex.Body, ex.Line = string(body), line
+			}
+		}
+		rel, _ := filepath.Rel(root, p)
+		ex.Path = filepath.ToSlash(rel)
+		n.Examples = append(n.Examples, ex)
+	}
+	return nil
+}
+
+// Example returns the example file of a language, or nil.
+func (n *Node) Example(lang string) *Example {
+	for i := range n.Examples {
+		if n.Examples[i].Lang == lang {
+			return &n.Examples[i]
+		}
+	}
+	return nil
 }
 
 // IsTestFile tells if a file name is a native test, by the conventions of spec 08.3.

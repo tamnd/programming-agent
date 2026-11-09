@@ -49,9 +49,9 @@ func fired(fs []Finding, rule string) []string {
 	return out
 }
 
-const problemDir = "nodes/searching/sequential-and-binary-search/search-in-sorted-array/"
+const problemDir = "nodes/data-and-values/collections/search-a-sorted-list/"
 
-const searchContract = `problem: search-in-sorted-array
+const searchContract = `problem: search-a-sorted-list
 entry: search
 params:
   - {name: a, type: "list<int>"}
@@ -71,9 +71,9 @@ func TestSRules(t *testing.T) {
 		problemDir + "cases/generated.yaml":  "generators:\n  - {name: uniform, file: generators/uniform.py}\n  - {name: uniform, file: ../x.py}\n",
 		problemDir + "generators/uniform.py": "import random\n\ndef generate(rng, n):\n    return {\"a\": sorted(random.sample(range(10**6), n)), \"x\": 1}\n",
 	})
-	p := c.BySlug["search-in-sorted-array"]
+	p := c.BySlug["search-a-sorted-list"]
 	p.Level, p.Tag = "core", "ABCDEF"
-	bs := c.BySlug["binary-search"]
+	bs := c.BySlug["search-a-sorted-list"]
 	bs.Complexity.Time["worst"] = "Θ(log m)"
 	fs := Run(c, Options{})
 	for rule, want := range map[string][]string{
@@ -157,7 +157,7 @@ func TestS03Run(t *testing.T) {
 
 func TestLRules(t *testing.T) {
 	c := fixture(t, map[string]string{"lean/Algo/Search/BinarySearch.lean": "module\n"})
-	n := c.BySlug["binary-search"]
+	n := c.BySlug["search-a-sorted-list"]
 	n.Level, n.Tag = "core", "ABCDEF"
 	n.Lean = map[string]string{"module": "Algo.Search.BinarySearch", "model": "Algo.Search.BinarySearch.search", "spec": "Algo.Search.Spec", "correct": "Algo.Search.BinarySearch.ok", "cost": "Algo.Search.BinarySearch.cost"}
 	ds := formal.Decls{
@@ -187,7 +187,7 @@ func TestLRules(t *testing.T) {
 }
 
 func TestS08(t *testing.T) {
-	const ignore = "nodes/searching/sequential-and-binary-search/binary-search/impl/python/mutants.ignore"
+	const ignore = "nodes/data-and-values/collections/search-a-sorted-list/impl/python/mutants.ignore"
 	tests := []struct {
 		name, text, want string
 	}{

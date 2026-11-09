@@ -33,7 +33,13 @@ func TestFormatNodeRefusesUnsafeChange(t *testing.T) {
 }
 
 func TestCorpusIsFormatted(t *testing.T) {
-	paths, err := filepath.Glob("../testdata/corpus/nodes/*/*/*/node.md")
+	var paths []string
+	err := filepath.WalkDir("../testdata/corpus/nodes", func(p string, d os.DirEntry, err error) error {
+		if err == nil && d.Name() == "node.md" {
+			paths = append(paths, p)
+		}
+		return err
+	})
 	if err != nil || len(paths) == 0 {
 		t.Fatalf("no nodes: %v", err)
 	}

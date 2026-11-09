@@ -11,6 +11,7 @@ import (
 var EdgeKeys = []string{
 	"solves", "implements", "techniques", "uses", "variant_of", "generalizes",
 	"model", "complexity_in", "prereqs", "see_also", "exercises",
+	"realizes", "related", "alternative_to", "refactorings", "prevents", "concepts", "features",
 }
 
 var (

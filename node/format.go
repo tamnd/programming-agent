@@ -16,10 +16,33 @@ import (
 
 // KeyOrder is the order of the front matter keys (spec 04.4). Keys that are not in the list go after it, in the order of the file.
 var KeyOrder = []string{
-	"tag", "kind", "slug", "name", "aliases", "area", "areas", "level", "summary",
+	"tag", "kind", "owner", "slug", "version", "code", "path", "name", "aliases", "area", "areas", "level", "summary",
+	// concept
+	"applies_to", "viz", "formal",
+	// language
+	"class", "tier", "paradigms", "typing", "memory", "execution", "appeared", "designers", "influenced_by",
+	"standard", "reference", "licence_of_reference_impl", "file_extensions", "hello_world",
+	// feature
+	"realizes", "grammar", "spec", "proposals", "compat", "since",
+	// release
+	"released", "eol", "patches", "adds", "removes", "deprecates", "notes",
+	// task
+	"contract", "category", "languages", "uses_features", "uses_algorithms",
+	// pattern, technique and practice
+	"family", "polarity", "intent", "also_known_as", "related", "languages_where_built_in", "refactorings",
+	// tool, library, format and standard
+	"role", "implements_language", "licence", "repo", "homepage", "first_release", "alternative_to",
+	"media_type", "extensions", "specs", "publisher",
+	// weakness
+	"cwe", "abstraction", "languages_affected", "owasp_top10_2025", "cwe_top25_2025", "detected_by", "prevents",
+	// diagnostic and api
+	"severity", "message_templates", "entity", "module", "concepts", "features",
+	// work, person and organization
+	"authors", "year", "born", "died", "founded", "url",
+	// the edges and the evidence of algorithm, kept for tasks with costs and for Lean
 	"solves", "implements", "techniques", "uses", "variant_of", "generalizes",
-	"model", "complexity", "complexity_in", "properties", "constraints", "history",
-	"prereqs", "see_also", "same_as", "lean", "sources", "exercises", "people",
+	"model", "complexity", "complexity_in", "properties", "constraints",
+	"history", "prereqs", "see_also", "same_as", "lean", "sources", "exercises", "people",
 }
 
 var topKeyRE = regexp.MustCompile(`^([A-Za-z_][A-Za-z0-9_]*)\s*:`)

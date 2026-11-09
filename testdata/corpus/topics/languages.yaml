@@ -1,0 +1,9 @@
+# The language template of spec 05.3, cut down for the tests. Each language of the register gets these sub-areas under /<lang>/.
+- id: overview
+  name: Overview and history
+- id: functions
+  name: Functions
+- id: collections
+  name: Built-in collections
+- id: versions
+  name: Versions and migration

@@ -1,7 +1,9 @@
 # Each line is a tag and its slug (spec 04.2). A tag never changes and is never used again.
-# Tags are 6 characters of Crockford base32. algo mint gives the next one.
-2B7QDX binary-search
-6SRCHA search-in-sorted-array
+# Tags are 6 characters of Crockford base32. prog mint gives the next one.
+2B7QDX search-a-sorted-list
+2PYTHN python
+3PY314 python/3.14
 7NVRNT loop-invariant
+7QKX2M closures
 8ASYMP asymptotic-notation
-9CMPMD comparison-model
+8NNKCK python/closures-and-nonlocal
