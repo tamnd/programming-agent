@@ -17,7 +17,7 @@ sources:
 
 ## Synopsis
 
-```python
+```text
 nonlocal identifier ["," identifier]*
 ```
 
