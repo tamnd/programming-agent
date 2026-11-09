@@ -289,21 +289,25 @@ type Example struct {
 	Path string `json:"path"`
 	Body string `json:"-"`
 	Line int    `json:"-"` // the line of the file where the body starts
+	// Verdict is the matrix cell that the file states, in a line such as "- Verdict: native." (spec 04.8).
+	Verdict string `json:"verdict,omitempty"`
 }
 
 // Node is one node directory.
 type Node struct {
 	Front
 	// Local is the slug as the front matter writes it. For an owned kind, Slug is the full slug, such as python/match-statement, and Local is match-statement.
-	Local     string    `json:"local,omitempty"`
-	Examples  []Example `json:"examples,omitempty"`
-	Body      string    `json:"-"`
-	BodyLine  int       `json:"-"` // the line of node.md where the body starts
-	Dir       string    `json:"-"`
-	Rel       string    `json:"path"` // the directory, relative to the root
-	RawFront  []byte    `json:"-"`
-	Forbidden []string  `json:"-"` // front matter keys that rule T05 rejects
-	Impls     []Impl    `json:"impls,omitempty"`
+	Local    string    `json:"local,omitempty"`
+	Examples []Example `json:"examples,omitempty"`
+	// Cells are the written cells of the matrix: by language for a concept (matrix.yaml), by concept for a language (concepts.yaml).
+	Cells     map[string]*Cell `json:"cells,omitempty"`
+	Body      string           `json:"-"`
+	BodyLine  int              `json:"-"` // the line of node.md where the body starts
+	Dir       string           `json:"-"`
+	Rel       string           `json:"path"` // the directory, relative to the root
+	RawFront  []byte           `json:"-"`
+	Forbidden []string         `json:"-"` // front matter keys that rule T05 rejects
+	Impls     []Impl           `json:"impls,omitempty"`
 	// CompatEntries are the entries of the compat file of the node (spec 09.2), and CompatErr is the error when the file could not be read. Probes holds probes/probes.yaml.
 	CompatEntries []compat.Entry           `yaml:"-" json:"-"`
 	CompatErr     error                    `yaml:"-" json:"-"`
@@ -404,6 +408,9 @@ func Read(root, dir string) (*Node, error) {
 	if err := readExamples(root, n); err != nil {
 		return nil, err
 	}
+	if err := readMatrix(root, n); err != nil {
+		return nil, err
+	}
 
 	if err := readImpls(root, n); err != nil {
 		return nil, err
@@ -458,6 +465,7 @@ func readExamples(root string, n *Node) error {
 		}
 		rel, _ := filepath.Rel(root, p)
 		ex.Path = filepath.ToSlash(rel)
+		ex.Verdict = exampleVerdict(ex.Body)
 		n.Examples = append(n.Examples, ex)
 	}
 	return nil

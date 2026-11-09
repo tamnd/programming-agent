@@ -37,6 +37,7 @@ type NodePage struct {
 	Facts    []FactRow
 	Guide    []Tile
 	Glance   []FactRow
+	Verdicts []VerdictRow
 	Owned    []Link
 	Proofs   []ProofView
 	Lean     *LeanView
@@ -343,6 +344,11 @@ func (b *builder) nodePage(n *node.Node) (*NodePage, error) {
 		}
 	}
 	p.Examples = b.exampleViews(n)
+	if n.Kind == "concept" {
+		if p.Verdicts = b.verdictRows(n, p.Examples); len(p.Verdicts) > 0 && hasH2(html, "in-languages") {
+			html = insertAtSection(html, b.snippet("verdict-body", p), "in-languages")
+		}
+	}
 	if len(p.Examples) > 0 {
 		html = insertAfterSection(html, b.snippet("examples-body", p), firstH2(html, exampleSections...), "pitfalls", "variations", "references")
 	}

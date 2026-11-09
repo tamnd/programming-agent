@@ -484,3 +484,10 @@ table.compat td { white-space: nowrap; }
 .compat .detail { color: var(--muted); font-size: 0.8rem; }
 .compat-notes { font-size: 0.85rem; color: var(--muted); }
 .compat-summary { font-size: 0.85rem; color: var(--muted); }
+
+/* The verdicts of the matrix */
+table.verdicts { margin: 0 0 1rem; }
+table.verdicts th[scope="row"] { text-align: left; font-weight: 600; white-space: nowrap; }
+.verdict { white-space: nowrap; }
+.v-absent, .v-n\/a { color: var(--muted); }
+.v-open { color: var(--missing); }
