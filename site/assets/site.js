@@ -86,29 +86,37 @@
     pal.addEventListener("click", function (e) { if (e.target === pal) pal.close(); });
   }
 
-  // Code tabs. The choice of language is kept for the next page.
-  var tabs = d.querySelector(".tabs");
+  // Code tabs. A page may have more than one group of tabs. A choice of language applies to every group and is kept for the next page.
+  var groups = Array.prototype.slice.call(d.querySelectorAll("section.code"));
   function pick(lang, save) {
-    var b = d.getElementById("tab-" + lang);
-    if (!b) return false;
-    tabs.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-selected", String(x === b)); x.tabIndex = x === b ? 0 : -1; });
-    d.querySelectorAll(".code .panel").forEach(function (p) { p.classList.toggle("on", p.id === "code-" + lang); });
-    if (save) try { localStorage.setItem("al-lang", lang); } catch (e) {}
-    return true;
+    var hit = false;
+    groups.forEach(function (g) {
+      var b = g.querySelector('.tabs button[data-lang="' + lang + '"]');
+      if (!b) return;
+      hit = true;
+      g.querySelectorAll(".tabs button").forEach(function (x) { x.setAttribute("aria-selected", String(x === b)); x.tabIndex = x === b ? 0 : -1; });
+      g.querySelectorAll(".panel").forEach(function (p) { p.classList.toggle("on", p.dataset.lang === lang); });
+    });
+    if (hit && save) try { localStorage.setItem("prog-lang", lang); } catch (e) {}
+    return hit;
   }
-  if (tabs) {
-    var want = location.hash.indexOf("#code-") === 0 ? location.hash.slice(6) : null;
+  if (groups.length) {
+    var m = /^#(?:code|example)-(.+)$/.exec(location.hash);
     var saved = null;
-    try { saved = localStorage.getItem("al-lang"); } catch (e) {}
-    if (!(want && pick(want, false)) && saved) pick(saved, false);
-    tabs.addEventListener("click", function (e) { var b = e.target.closest("button[data-lang]"); if (b) pick(b.dataset.lang, true); });
-    tabs.addEventListener("keydown", function (e) {
-      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-      var bs = Array.prototype.slice.call(tabs.querySelectorAll("button"));
-      var i = bs.indexOf(d.activeElement);
-      if (i < 0) return;
-      var j = (i + (e.key === "ArrowRight" ? 1 : bs.length - 1)) % bs.length;
-      bs[j].focus(); pick(bs[j].dataset.lang, true);
+    try { saved = localStorage.getItem("prog-lang"); } catch (e) {}
+    if (!(m && pick(m[1], false)) && saved) pick(saved, false);
+    groups.forEach(function (g) {
+      var tabs = g.querySelector(".tabs");
+      if (!tabs) return;
+      tabs.addEventListener("click", function (e) { var b = e.target.closest("button[data-lang]"); if (b) pick(b.dataset.lang, true); });
+      tabs.addEventListener("keydown", function (e) {
+        if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+        var bs = Array.prototype.slice.call(tabs.querySelectorAll("button"));
+        var i = bs.indexOf(d.activeElement);
+        if (i < 0) return;
+        var j = (i + (e.key === "ArrowRight" ? 1 : bs.length - 1)) % bs.length;
+        bs[j].focus(); pick(bs[j].dataset.lang, true);
+      });
     });
   }
 

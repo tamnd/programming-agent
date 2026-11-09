@@ -10,6 +10,7 @@
 <aside class="toc-col"><nav class="toc" aria-label="On this page"><p>On this page</p><ol>{{range .TOC}}<li><a href="#{{.ID}}">{{.Text}}</a></li>{{end}}<li><a href="#about-this-page">About this page</a></li></ol></nav></aside>
 <div class="content">
 {{with .Card}}{{template "card" .}}{{end}}
+{{with .Facts}}<dl class="card facts" aria-label="Facts">{{range .}}<div><dt>{{.Key}}</dt><dd>{{if .Links}}{{template "links" .Links}}{{else if .URL}}<a href="{{.URL}}">{{if .Code}}<code>{{.Text}}</code>{{else}}{{.Text}}{{end}}</a>{{else if .Code}}<code>{{.Text}}</code>{{else}}{{.Text}}{{end}}</dd></div>{{end}}</dl>{{end}}
 {{with .Prereqs}}<nav class="read-first" aria-label="Read first"><span>Read first</span>{{range .}}{{template "link" .}}{{end}}</nav>{{end}}
 <div class="prose">{{.Body}}</div>
 {{with .Leads}}<section class="leads"><h2 class="small">Where this leads</h2><ul class="chips">{{range .}}<li style="--hue: {{.Hue}}">{{template "link" .}}</li>{{end}}</ul></section>{{end}}
@@ -59,14 +60,27 @@
 {{template "code-body" .}}{{end}}
 
 {{define "code-body"}}<section class="code" id="code-tabs" aria-label="Code">
-<p>Each implementation follows the pseudocode above. A comment <code>@line</code> links a line of code to a line of the pseudocode. Point at a line of the pseudocode to see the matching code. The build runs the native tests of each language.</p>
+<p>The build runs the native tests of each language in a pinned toolchain.</p>
 <div class="tabs" role="tablist" aria-label="Language">{{range .Impls}}<button type="button" role="tab" id="tab-{{.Lang}}" aria-controls="code-{{.Lang}}" aria-selected="{{.Selected}}" data-lang="{{.Lang}}">{{.Name}}</button>{{end}}</div>
-{{range .Impls}}<div class="panel{{if .Selected}} on{{end}}" role="tabpanel" id="code-{{.Lang}}" aria-labelledby="tab-{{.Lang}}" data-markers="{{.Markers}}">
+{{range .Impls}}<div class="panel{{if .Selected}} on{{end}}" role="tabpanel" id="code-{{.Lang}}" aria-labelledby="tab-{{.Lang}}" data-lang="{{.Lang}}" data-markers="{{.Markers}}">
 <div class="panel-bar"><span class="file">{{.File}}</span>{{template "rung" .Rung}}{{with .Test}}{{if .Pass}}<span class="test ok">tests pass</span>{{else}}<span class="test bad">tests fail</span>{{end}}{{end}}<span class="grow"></span><a href="{{.Raw}}">Raw</a><a href="{{.GitHub}}">GitHub</a><button type="button" class="copy" data-copy>Copy</button></div>
 {{.HTML}}
 {{range .Tests}}<details class="tests"><summary>{{.Name}} <span>{{.Lines}} lines</span></summary>{{.HTML}}</details>{{end}}
 </div>{{end}}
 </section>
+{{end}}
+
+{{define "examples-body"}}<section class="code examples" aria-label="Examples">
+<div class="tabs" role="tablist" aria-label="Language">{{range .Examples}}<button type="button" role="tab" id="tab-{{.ID}}" aria-controls="{{.ID}}" aria-selected="{{.Selected}}" data-lang="{{.Lang}}">{{.Name}}</button>{{end}}</div>
+{{range .Examples}}<div class="panel{{if .Selected}} on{{end}}" role="tabpanel" id="{{.ID}}" aria-labelledby="tab-{{.ID}}" data-lang="{{.Lang}}">
+<div class="panel-bar"><span class="file">{{.Name}}</span><span class="grow"></span><a href="{{.GitHub}}">GitHub</a></div>
+<div class="prose">{{.HTML}}</div>
+</div>{{end}}
+</section>
+{{end}}
+
+{{define "guide-body"}}{{with .Guide}}{{template "tiles" .}}{{end}}
+{{with .Owned}}<h3 id="pages-of-this-language">Pages of this language</h3><ul class="chips">{{range .}}<li style="--hue: {{.Hue}}">{{template "link" .}}</li>{{end}}</ul>{{end}}
 {{end}}
 
 {{define "formal-section"}}<h2 id="formal-proof">Formal proof</h2>

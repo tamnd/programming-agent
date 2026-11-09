@@ -331,9 +331,9 @@ func (b *builder) kinds() error {
 }
 
 func (b *builder) gallery() error {
-	p := ListPage{Base: b.base("Visualize", "Every interactive scene of the site. Step through an algorithm, change the input and watch the state change.", "/visualize/")}
+	p := ListPage{Base: b.base("Visualize", "Every interactive scene of the site. Step through a program, change the input and watch the state change.", "/visualize/")}
 	p.Section, p.Heading = "visualize", "Visualize"
-	p.Lead = "Each scene runs the algorithm on an input that you choose. You can step forward and back. The pseudocode shows the current line."
+	p.Lead = "Each scene runs a program on an input that you choose. You can step forward and back. The code shows the current line."
 	p.Tiles = b.sceneTiles(0)
 	if len(p.Tiles) == 0 {
 		p.Empty = "No scenes exist yet."
@@ -356,15 +356,15 @@ func (b *builder) langTiles() []Tile {
 }
 
 func (b *builder) languages() error {
-	p := ListPage{Base: b.base("Languages", "The programming languages of the implementations, with the test framework and the toolchain of each.", "/languages/")}
+	p := ListPage{Base: b.base("Languages", "The programming languages of the site, with the test framework and the toolchain of each.", "/languages/")}
 	p.Section, p.Heading = "languages", "Languages"
-	p.Lead = "Each implementation is one file with native tests. The build runs the tests in a pinned toolchain. A tier 1 language is in every build."
+	p.Lead = "Each example and each task solution runs in a pinned toolchain. A tier 1 language is in every build."
 	p.Tiles = b.langTiles()
 	if err := b.page("list", "/languages/", p); err != nil {
 		return err
 	}
 	for _, l := range b.c.Langs {
-		lp := ListPage{Base: b.base(l.Name, fmt.Sprintf("Algorithms and data structures in %s, with native tests.", l.Name), "/languages/"+l.ID+"/")}
+		lp := ListPage{Base: b.base(l.Name, fmt.Sprintf("Examples and task solutions in %s, with native tests.", l.Name), "/languages/"+l.ID+"/")}
 		lp.Section, lp.Heading = "languages", l.Name
 		lp.Crumbs = []Link{{Name: "Languages", URL: "/languages/"}}
 		lp.Lead = fmt.Sprintf("Every implementation in %s on this site.", l.Name)
@@ -437,20 +437,37 @@ type MatrixCell struct {
 }
 
 func (b *builder) matrix() error {
-	p := MatrixPage{Base: b.base("Matrix", "The state of every page: the proof, the Lean proof, the code in each language, the visual and the writing.", "/matrix/"), Langs: b.c.Langs}
+	p := MatrixPage{Base: b.base("Matrix", "Each concept, feature and task by each language: where the site has code that runs (spec 4.8).", "/matrix/")}
 	p.Wide = true
 	ns := slices.Clone(b.c.Nodes)
 	sort.Slice(ns, func(i, j int) bool { return ns[i].Name < ns[j].Name })
+	var rows []*node.Node
 	for _, n := range ns {
-		if n.Kind != "algorithm" && n.Kind != "data-structure" {
-			continue
+		if n.Kind == "concept" || n.Kind == "task" || n.Kind == "pattern" || n.Kind == "technique" || n.Kind == "practice" {
+			rows = append(rows, n)
 		}
+	}
+	// The columns are the tier 1 languages and each other language that has code in a row.
+	for _, l := range b.c.Langs {
+		used := l.Tier == 1
+		for _, n := range rows {
+			if n.Lang(l.ID) != nil || n.Example(l.ID) != nil {
+				used = true
+			}
+		}
+		if used {
+			p.Langs = append(p.Langs, l)
+		}
+	}
+	for _, n := range rows {
 		s := b.status[n.Slug]
-		row := MatrixRow{Link: b.link(n.Slug), H: s.H, L: s.L, V: s.V, W: s.W}
-		for _, l := range b.c.Langs {
+		row := MatrixRow{Link: b.link(n.Slug), W: s.W}
+		for _, l := range p.Langs {
 			c := MatrixCell{}
 			if r, ok := s.I[l.ID]; ok {
 				c = MatrixCell{Has: true, Level: r.Level, Label: r.Label, Title: l.Name + ": " + r.Name, URL: "/" + n.Slug + "/#code-" + l.ID}
+			} else if n.Example(l.ID) != nil {
+				c = MatrixCell{Has: true, Level: 1, Label: "ex", Title: l.Name + ": example", URL: "/" + n.Slug + "/#code-" + l.ID}
 			}
 			row.Cells = append(row.Cells, c)
 		}
@@ -463,7 +480,7 @@ var docPages = []struct{ name, title, desc string }{
 	{"about", "About", "What this site is, who writes it and how a page earns its badges."},
 	{"contribute", "Contribute", "How to write a page, add an implementation, add a scene or review a proof."},
 	{"badges", "Badges", "What each level of each ladder means and how the build computes it."},
-	{"learn", "Learn", "A reading path through the site, from the first ideas to the core algorithms."},
+	{"learn", "Learn", "A reading path through the site, from the first program to the design of large systems."},
 }
 
 func (b *builder) pages() error {
@@ -619,7 +636,7 @@ func (b *builder) machine() error {
 	}
 	var all []apiNode
 	var llms strings.Builder
-	fmt.Fprintf(&llms, "# Algorithm\n\n> Algorithms and data structures, explained in plain words, proved by hand and in Lean, implemented and tested in many languages, and shown step by step.\n\nEach written page has a Markdown copy at /<slug>.md. The JSON record of every page is in /api/nodes.json. The text is CC BY-SA 4.0. The code is MIT.\n")
+	fmt.Fprintf(&llms, "# Programming\n\n> Every idea of programming, explained in plain words, with code in many languages that the build runs and checks.\n\nEach written page has a Markdown copy at /<slug>.md. The JSON record of every page is in /api/nodes.json. The text is CC BY-SA 4.0. The code is MIT.\n")
 	groups := map[string][]*node.Node{}
 	for _, n := range b.c.Nodes {
 		a := apiNode{Front: n.Front, URL: b.opt.BaseURL + "/" + n.Slug + "/", Path: n.Rel, Status: b.status[n.Slug], Scene: n.Scene != ""}

@@ -238,6 +238,14 @@ details.proof[open] > summary::before { transform: rotate(90deg); }
 .panel-bar button { font: inherit; border: 0; background: var(--surface-2); color: var(--soft); padding: 0.2rem 0.6rem; cursor: pointer; }
 .panel-bar button:hover { color: var(--text); }
 .panel pre { margin: 0; max-height: 36rem; }
+.examples .panel > .prose { padding: 0.9rem 0 0; }
+.examples .panel > .prose pre { margin: 0 0 1rem; max-height: none; }
+figure.output { margin: -0.9rem 0 1.2rem; }
+figure.output figcaption { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 650; color: var(--soft); padding: 0.35rem 1.2rem 0; background: var(--surface-2); }
+figure.output pre { margin: 0; background: var(--surface-2); }
+figure.output.stderr figcaption { color: hsl(8 60% 45%); }
+.code-note { font-size: 0.85rem; color: var(--soft); margin: 0 0 0.3rem; }
+.code-note.fails::before { content: "✕ "; color: hsl(8 60% 45%); }
 .panel pre .line.hl { background: color-mix(in srgb, var(--st-compare) 22%, transparent); display: inline-block; min-width: 100%; }
 .test { font-weight: 600; }
 .test.ok { color: var(--ok); }
