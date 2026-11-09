@@ -78,7 +78,11 @@ jobs:
           } > "$RUNNER_TEMP/images.yaml"
           if [ "$IMAGE" = python ]; then echo "python: $ID" > "$RUNNER_TEMP/images.yaml"; fi
           cat "$RUNNER_TEMP/images.yaml"
-          "$RUNNER_TEMP/prog" test -root content -sandbox docker -images "$RUNNER_TEMP/images.yaml" -lang "$LANGS" -out "$RUNNER_TEMP/results"
+          # The test corpus of this repository always runs. The content repository runs too when it has nodes.
+          "$RUNNER_TEMP/prog" test -root testdata/corpus -sandbox docker -images "$RUNNER_TEMP/images.yaml" -lang "$LANGS" -out "$RUNNER_TEMP/results-corpus"
+          if [ -d content/nodes ]; then
+            "$RUNNER_TEMP/prog" test -root content -sandbox docker -images "$RUNNER_TEMP/images.yaml" -lang "$LANGS" -out "$RUNNER_TEMP/results"
+          fi
       - name: Push the image
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
