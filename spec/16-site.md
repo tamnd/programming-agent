@@ -466,6 +466,8 @@ Reports get the label `reader-report`. The work queue (14) takes them in as gap 
 
 **Decision.** The site starts on Cloudflare Workers with static assets and R2 from M0. It does not start on Cloudflare Pages.
 
+**State at M0.** The Worker `programming` serves the static assets and has no script yet. The host reads `_redirects` and `_headers` from the asset tree, adds the trailing slash to a directory URL and serves `404.html` for a missing path. `prog site deploy` uploads a new version and makes it live on the custom domain. With `-preview`, it uploads a version with the preview alias `pr-<n>` and does not change production. The limits at this stage are 20,000 files for each version and 100 `_redirects` rules with a placeholder, and `prog site check` fails before the deploy when the tree breaks one. The script of the Worker and the R2 bucket come when the hot set passes these limits.
+
 - Algorithm started on Pages and passed the 20,000-file limit at about 3,500 written nodes. It then had to turn language and proof pages into redirects (2150, 14.9).
 - This site has more items than algorithm's whole plan by M1, and card collections and twins from day one.
 
