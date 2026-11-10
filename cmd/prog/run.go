@@ -62,6 +62,9 @@ func cmdRun(args []string) error {
 		for id, p := range lang.Programs {
 			lang.Programs[id] = p.WithTool(from, to)
 		}
+		for id, p := range lang.TestPrograms {
+			lang.TestPrograms[id] = p.WithTool(from, to)
+		}
 	}
 	box, err := openSandbox(*sandbox, under(c.Root, *images), *unsafe)
 	if err != nil {

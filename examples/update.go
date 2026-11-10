@@ -13,7 +13,7 @@ type edit struct {
 	Text       string
 }
 
-// Update writes the output of the runs into the output blocks of a file (prog run -update). It replaces the text of an output block that differs from the run, and adds an output block after a run or wrong block that has none. It does not change an output block with match=regex or match=any, because a person wrote the pattern. The results must be of the cases of src. It returns the new text and the number of blocks that changed, and it sets Updated on each result whose blocks now match the run.
+// Update writes the output of the runs into the output blocks of a file (prog run -update). It replaces the text of an output block that differs from the run, and adds an output block after a run, wrong or test block that has none. The output of a test block is the report of the test runner with its normalizers (spec 07.11). It does not change an output block with match=regex or match=any, because a person wrote the pattern. The results must be of the cases of src. It returns the new text and the number of blocks that changed, and it sets Updated on each result whose blocks now match the run.
 func Update(src string, results []Result) (string, int) {
 	var edits []edit
 	for i := range results {
@@ -22,14 +22,23 @@ func Update(src string, results []Result) (string, int) {
 		if c == nil || r.Status == "skip" || r.Got.TimedOut {
 			continue
 		}
-		mode := c.Mode()
+		// The report of a test block that does not pass, or a test block with fails that has no failed test, is not an output to keep.
+		if c.Mode() == "test" && checkTests(c, r.Got) != "" {
+			continue
+		}
 		if len(c.Outputs) == 0 {
-			if (mode != "run" && mode != "wrong") || c.Block.Attrs["match"] == "any" || r.Got.Exit != 0 {
+			if !writesOutput(r) || c.Block.Attrs["match"] == "any" {
 				continue
 			}
-			text := Clean(r.Got.Stdout)
+			stream := reportStream(c, &Block{})
+			text := Clean(Stream(r.Got, stream))
+			info := "output"
+			if stream != "" {
+				// A test runner such as unittest writes its report to stderr. The output block says so.
+				info += " stream=" + stream
+			}
 			fence := fenceFor(text)
-			edits = append(edits, edit{c.Block.After, c.Block.After, "\n" + fence + "output\n" + text + fence + "\n"})
+			edits = append(edits, edit{c.Block.After, c.Block.After, "\n" + fence + info + "\n" + text + fence + "\n"})
 			r.Updated = true
 			continue
 		}
@@ -42,7 +51,7 @@ func Update(src string, results []Result) (string, int) {
 			if o.Attrs["version"] != "" && o.Attrs["version"] != versionOf(r.Tool) && !sameVersion(versionOf(r.Tool), o.Attrs["version"]) {
 				continue
 			}
-			text := Clean(Stream(r.Got, o.Attrs["stream"]))
+			text := Clean(Stream(r.Got, reportStream(c, o)))
 			norm := strings.Split(o.Attrs["normalize"], ",")
 			if Normalize(o.Code, norm) == Normalize(text, norm) {
 				continue
@@ -56,6 +65,18 @@ func Update(src string, results []Result) (string, int) {
 		src = src[:e.Start] + e.Text + src[e.End:]
 	}
 	return src, len(edits)
+}
+
+// writesOutput tells if -update adds an output block for the result of a case that has none. A run, wrong or test block needs a run that exits 0. A test block needs a run that checkTests accepts, so a test block with fails needs a test that failed.
+func writesOutput(r *Result) bool {
+	c := r.Case
+	switch {
+	case c.Mode() == "test":
+		return checkTests(c, r.Got) == ""
+	case c.Mode() == "run", c.Mode() == "wrong":
+		return r.Got.Exit == 0
+	}
+	return false
 }
 
 // fenceFor gives a fence that is longer than each run of backticks in the text.

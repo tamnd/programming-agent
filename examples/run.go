@@ -69,13 +69,27 @@ func (x *Runner) toolchain(p lang.Program) (string, error) {
 // Run runs one case and checks it.
 func (x *Runner) Run(c *Case) Result {
 	b := c.Block
-	res := Result{File: c.File, Line: b.Line, ID: c.ID(), Lang: b.Lang, Mode: c.Mode(), Case: c}
+	res := Result{File: c.File, Line: b.Line, ID: c.ID(), Lang: b.Lang, Mode: c.Label(), Case: c}
 	skip := func(why string) Result { res.Status, res.Why = "skip", why; return res }
 	fail := func(format string, a ...any) Result {
 		res.Status, res.Why = "fail", fmt.Sprintf(format, a...)
 		return res
 	}
+	test := c.Mode() == "test"
 	p, ok := lang.Programs[b.Lang]
+	if test {
+		// A test block runs with the test runner of the language (spec 07.11). A language with no test runner is a skip, not a failure.
+		var err error
+		if p, err = lang.TestProgramFor(b.Lang, c.Deps() != ""); err != nil {
+			var ts lang.TestSkip
+			if errors.As(err, &ts) {
+				res.Reason = ts.Reason
+				return skip(ts.Why)
+			}
+			return fail("%v", err)
+		}
+		ok = true
+	}
 	if !ok {
 		return skip("prog run has no runner for " + b.Lang)
 	}
@@ -96,7 +110,7 @@ func (x *Runner) Run(c *Case) Result {
 	lock := c.LockPath()
 	if lock != "" {
 		// A language with no support for deps= is a skip, not a failure, so look before the toolchain.
-		if _, err := lang.DepsFor(p.ID, x.R.Box != nil); err != nil {
+		if _, err := lang.DepsFor(p.ID, x.R.Box != nil, test); err != nil {
 			return skipDeps(err)
 		}
 	}
@@ -117,21 +131,46 @@ func (x *Runner) Run(c *Case) Result {
 			return skip(fmt.Sprintf("the block is for version %s and the toolchain is %s", v, have))
 		}
 	}
-	p = adjust(p, b)
+	if test {
+		if p, err = x.R.ResolveTest(p); err != nil {
+			res.Reason = "runner"
+			return skip(err.Error())
+		}
+	}
+	// The test runners of C# and C++ get their steps from deps=, so the flags of the block go to them after WithDeps.
+	adjusted := len(p.Steps) > 0
+	if adjusted {
+		p = adjust(p, b)
+	}
 	if lock != "" {
 		if p, err = x.R.WithDeps(p, lock); err != nil {
 			return skipDeps(err)
 		}
 	}
+	if !adjusted {
+		p = adjust(p, b)
+	}
 	timeout := 10 * time.Second
 	if t, err := strconv.Atoi(b.Attrs["timeout"]); err == nil && t > 0 && t <= 30 {
 		timeout = time.Duration(t) * time.Second
 	}
-	got, err := x.R.RunProgram(p, c.Files(p), c.Stdin, strings.Fields(b.Attrs["args"]), timeout)
-	res.Got, res.Ms = got, got.Ms
+	files := c.Files(p)
+	if test {
+		p = p.WithFiles(files, c.TestFile(p))
+	}
+	got, err := x.R.RunProgram(p, files, c.Stdin, strings.Fields(b.Attrs["args"]), timeout)
 	if err != nil {
+		res.Got, res.Ms = got, got.Ms
 		return fail("%v", err)
 	}
+	if lock != "" && lang.DepsMissing(p.ID, got) {
+		res.Reason = "deps"
+		return skip("deps: the packages of " + c.Deps() + " are not all here, and the run has no network:\n" + tail(got.Stderr+got.Stdout))
+	}
+	if test {
+		got.Stdout, got.Stderr = NormalizeReport(b.Lang, got.Stdout), NormalizeReport(b.Lang, got.Stderr)
+	}
+	res.Got, res.Ms = got, got.Ms
 	switch c.Mode() {
 	case "run", "wrong":
 		if got.TimedOut {
@@ -144,9 +183,16 @@ func (x *Runner) Run(c *Case) Result {
 		if why := checkFailure(b.Attrs["expect"], got); why != "" {
 			return fail("%s", why)
 		}
+	case "test":
+		if why := checkTests(c, got); why != "" {
+			if got.TimedOut {
+				why = fmt.Sprintf("the tests ran for more than %s", timeout)
+			}
+			return fail("%s", why)
+		}
 	}
 	for _, o := range c.Outputs {
-		if why := compare(o, got); why != "" {
+		if why := compare(o, got, c); why != "" {
 			return fail("%s", why)
 		}
 	}
@@ -154,14 +200,17 @@ func (x *Runner) Run(c *Case) Result {
 	return res
 }
 
-// adjust applies the std=, flags= and sanitizer settings of a block to the build step of the language.
+// adjust applies the std=, flags= and sanitizer settings of a block to the build step of the language. The build step is the first step after the setup steps, such as go mod init.
 func adjust(p lang.Program, b *Block) lang.Program {
 	steps := make([][]string, len(p.Steps))
 	for i, s := range p.Steps {
 		steps[i] = slices.Clone(s)
 	}
 	p.Steps = steps
-	first := p.Steps[0]
+	if p.Setup >= len(p.Steps) {
+		return p
+	}
+	first := p.Steps[p.Setup]
 	if std := b.Attrs["std"]; std != "" && (p.ID == "c" || p.ID == "cpp") {
 		for i, a := range first {
 			if strings.HasPrefix(a, "-std=") {
@@ -185,11 +234,19 @@ func adjust(p lang.Program, b *Block) lang.Program {
 		}
 	}
 	if len(extra) > 0 {
-		first = append(first[:1], append(extra, first[1:]...)...)
+		// The flags go after the tool, or after the subcommand of a tool such as go test or cargo test.
+		at := 1
+		if subcommands[first[0]] && len(first) > 1 {
+			at = 2
+		}
+		first = append(first[:at:at], append(extra, first[at:]...)...)
 	}
-	p.Steps[0] = first
+	p.Steps[p.Setup] = first
 	return p
 }
+
+// subcommands are the tools whose first argument is a subcommand. The flags of a block go after the subcommand.
+var subcommands = map[string]bool{"go": true, "cargo": true, "dotnet": true}
 
 // dropOption removes an option from a command: "--edition 2024", "--edition=2024" or "-std=c23".
 func dropOption(c []string, opt string) []string {
@@ -276,15 +333,19 @@ var (
 	diagCodeRE     = regexp.MustCompile(`\b(E\d{4}|TS\d{4,5}|CS\d{4}|SC\d{4})\b`)
 )
 
-// compare checks the output of a run against an output block. It returns why they differ, or "".
-func compare(o *Block, got lang.RunResult) string {
+// compare checks the output of a run against an output block of the case c. It returns why they differ, or "". The output of a test block is the report of the test runner, with the normalizers of the runner on both sides.
+func compare(o *Block, got lang.RunResult, c *Case) string {
 	match := o.Attrs["match"]
 	if match == "any" {
 		return ""
 	}
-	actual := Stream(got, o.Attrs["stream"])
+	actual := Stream(got, reportStream(c, o))
+	recorded := o.Code
+	if c != nil && c.Mode() == "test" {
+		recorded = NormalizeReport(c.Block.Lang, recorded)
+	}
 	norm := strings.Split(o.Attrs["normalize"], ",")
-	want, have := Normalize(o.Code, norm), Normalize(actual, norm)
+	want, have := Normalize(recorded, norm), Normalize(actual, norm)
 	switch match {
 	case "", "exact":
 		if want == have {
