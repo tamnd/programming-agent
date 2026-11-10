@@ -35,6 +35,7 @@ type NodePage struct {
 	Examples []ExampleView
 	Facts    []FactRow
 	Guide    []Tile
+	Glance   []FactRow
 	Owned    []Link
 	Proofs   []ProofView
 	Lean     *LeanView
@@ -189,6 +190,20 @@ func insertAfterSection(html, extra, id string, fallback ...string) string {
 	return html[:j] + extra + html[j:]
 }
 
+// insertAtSection puts extra at the start of the section with the id, after its heading.
+func insertAtSection(html, extra, id string) string {
+	i := strings.Index(html, `<h2 id="`+id+`"`)
+	if i < 0 {
+		return html
+	}
+	end := strings.Index(html[i:], "</h2>")
+	if end < 0 {
+		return html
+	}
+	end += i + len("</h2>")
+	return html[:end] + "\n" + extra + html[end:]
+}
+
 // dropEmptyH2 removes the heading of a section that the build fills, when the build had nothing to put in it.
 func dropEmptyH2(html, id string) string {
 	i := strings.Index(html, `<h2 id="`+id+`"`)
@@ -324,6 +339,13 @@ func (b *builder) nodePage(n *node.Node) (*NodePage, error) {
 		html = insertAfterSection(html, b.snippet("examples-body", p), firstH2(html, exampleSections...), "pitfalls", "variations", "references")
 	}
 	if n.Kind == "language" {
+		if p.Glance = b.glance(n); len(p.Glance) > 0 {
+			if hasH2(html, "the-language-at-a-glance") {
+				html = insertAtSection(html, b.snippet("glance-body", p), "the-language-at-a-glance")
+			} else {
+				html = insertBefore(html, b.snippet("glance-section", p), "the-guide", "versions-and-support", "references")
+			}
+		}
 		p.Guide = b.guideTiles(n)
 		p.Owned = b.ownedLinks(n.Slug)
 		if len(p.Guide) > 0 || len(p.Owned) > 0 {

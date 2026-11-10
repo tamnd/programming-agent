@@ -103,7 +103,8 @@ func TestKindPages(t *testing.T) {
 		// A feature names its language and its first version.
 		"python/closures-and-nonlocal/index.html": {`<dt>Language</dt>`, `<dd><a href="/python/">Python</a></dd>`, `<dt>Since</dt><dd>3.0</dd>`},
 		// A language page has the facts of the language and the parts of its guide.
-		"python/index.html": {`<dt>Typing</dt><dd>dynamic, strong, checked at runtime and optional-static</dd>`, `<dt>Appeared</dt><dd>1991</dd>`, `<code>py pyi</code>`, `href="/python/functions/"`, `href="/python/3.14/"`},
+		// The table of the section "The language at a glance" comes from the front matter.
+		"python/index.html": {`<table class="glance">`, `<th scope="row">Typing</th><td>dynamic, strong, checked at run time and by optional static checkers</td>`, `<dt>Appeared</dt><dd>1991</dd>`, `<code>.py .pyi</code>`, `href="/python/functions/"`, `href="/python/3.14/"`},
 	}
 	for p, wants := range checks {
 		s := read(p)
@@ -157,6 +158,19 @@ func TestNaturalLess(t *testing.T) {
 	for _, c := range [][2]string{{"e0382", "e0499"}, {"pep-8", "pep-634"}, {"e99", "e100"}, {"str.join", "str.split"}} {
 		if !naturalLess(c[0], c[1]) || naturalLess(c[1], c[0]) {
 			t.Errorf("%s is not before %s", c[0], c[1])
+		}
+	}
+}
+
+func TestTitleWords(t *testing.T) {
+	for in, want := range map[string]string{
+		"guido-van-rossum": "Guido van Rossum",
+		"modula-3":         "Modula-3",
+		"brendan-eich":     "Brendan Eich",
+		"icon":             "Icon",
+	} {
+		if got := titleWords(in); got != want {
+			t.Errorf("titleWords(%q) = %q, want %q", in, got, want)
 		}
 	}
 }
