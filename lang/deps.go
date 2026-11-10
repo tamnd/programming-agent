@@ -26,16 +26,20 @@ var DepsTimeout = 20 * time.Minute
 
 // Deps is how a language gets the third-party packages of a lock file (spec 07.7). The image of the language does not have them. In a sandbox, the runner builds an image from the image of the language with the packages in it. The image build is the only step with network, and the block runs in the new image with no network. On this machine, the runner gets the packages with the local toolchain and no network, or the block is skipped.
 type Deps struct {
-	// Lock is the name of the lock file, such as Cargo.lock.
+	// Lock is the name of the lock file, such as Cargo.lock, or a pattern of names, such as *.csproj.
 	Lock string
 	// With are the other files next to the lock file that the build needs, such as Cargo.toml.
 	With []string
 	// Optional are files next to the lock file that the build uses when they are there.
 	Optional []string
-	// Dockerfile is the text of the image with the packages. %[1]s is the image of the language. The build context holds the lock file and the files of With and Optional.
+	// Dockerfile is the text of the image with the packages. %[1]s is the image of the language. The build context holds the lock file and the files of With and Optional. It is "" when the image of the language has the packages already, so the block runs in that image.
 	Dockerfile string
-	// Program changes the program of a block so that it uses the packages. files are the lock file and the files of With and Optional, by name. dir is the directory of the packages that Prepare made on this machine. It is "" in the image.
+	// Program changes the program of a block so that it uses the packages. files are the lock file and the files of With and Optional, by name. dir is the directory of the packages that Prepare made on this machine. It is "" in the image. Program is nil when the language runs only the test blocks with deps=.
 	Program func(p Program, files map[string][]byte, dir string) (Program, error)
+	// Test is Program for the test runner of a test block (spec 07.11). It is nil when the language cannot run a test block with deps=.
+	Test func(p Program, files map[string][]byte, dir string) (Program, error)
+	// Missing matches the output of a failed build when the packages are not there, such as a restore error of NuGet. The block is then a skip with the reason deps.
+	Missing *regexp.Regexp
 	// Prepare gets the packages into dir on this machine, with no network. dir holds the lock file and the files of With and Optional. Prepare is nil when the language has no local support.
 	Prepare func(ctx context.Context, dir string) error
 }
@@ -50,6 +54,10 @@ const (
 	mavenVersion          = "3.9.16"
 	mavenSHA256           = "80ffca22aed9e8b9713a232f3394fd81d7f20322df75efdb2b047dbd3e3a23bb"
 	mavenCopyDependencies = "org.apache.maven.plugins:maven-dependency-plugin:3.11.0:copy-dependencies"
+	// mavenScope copies the jars of each scope. The test scope holds the compile, the runtime and the test jars, so that a test block can use a test library such as AssertJ.
+	mavenScope = "-DincludeScope=test"
+	// mavenExclude leaves out the jars of JUnit. The JUnit console launcher has them, and a second copy of the JUnit engine on the class path stops the launcher.
+	mavenExclude = "-DexcludeGroupIds=org.junit.jupiter,org.junit.platform,org.junit.vintage,org.opentest4j,org.apiguardian"
 )
 
 // The paths of the packages in the images that the Dockerfiles below build.
@@ -90,7 +98,7 @@ ADD --checksum=sha256:` + mavenSHA256 + ` https://repo1.maven.org/maven2/org/apa
 RUN mkdir -p /opt/maven /opt/prog/lib && tar -xzf /tmp/maven.tar.gz -C /opt/maven --strip-components=1
 COPY pom.xml /opt/prog/deps/pom.xml
 # Maven copies the jars of the pom and the jars that they need into /opt/prog/lib. This is the only step with network.
-RUN /opt/maven/bin/mvn -B -q -f /opt/prog/deps/pom.xml -Dmaven.repo.local=/tmp/m2 ` + mavenCopyDependencies + ` -DincludeScope=runtime -DoutputDirectory=/opt/prog/lib
+RUN /opt/maven/bin/mvn -B -q -f /opt/prog/deps/pom.xml -Dmaven.repo.local=/tmp/m2 ` + mavenCopyDependencies + ` ` + mavenScope + ` ` + mavenExclude + ` -DoutputDirectory=/opt/prog/lib
 
 FROM %[1]s
 COPY --from=fetch /opt/prog/lib /opt/prog/lib
@@ -115,16 +123,24 @@ USER 1000:1000
 
 // DepsSupport are the languages that can run a block with deps=. A block of another language with deps= is skipped with the reason deps.
 var DepsSupport = map[string]Deps{
-	"rust": {Lock: "Cargo.lock", With: []string{"Cargo.toml"}, Dockerfile: rustDockerfile, Program: rustDeps, Prepare: rustPrepare},
-	"java": {Lock: "pom.xml", Dockerfile: javaDockerfile, Program: javaDeps, Prepare: javaPrepare},
-	"cpp":  {Lock: "vcpkg.json", Optional: []string{"vcpkg-configuration.json"}, Dockerfile: cppDockerfile, Program: cppDeps},
+	"rust": {Lock: "Cargo.lock", With: []string{"Cargo.toml"}, Dockerfile: rustDockerfile, Program: rustDeps, Test: rustTestDeps, Prepare: rustPrepare},
+	"java": {Lock: "pom.xml", Dockerfile: javaDockerfile, Program: javaDeps, Test: javaDeps, Prepare: javaPrepare},
+	"cpp":  {Lock: "vcpkg.json", Optional: []string{"vcpkg-configuration.json"}, Dockerfile: cppDockerfile, Program: cppDeps, Test: cppTestDeps},
+	// The dotnet image has the test packages in /opt/nuget (images/dotnet), so it needs no image of its own.
+	"csharp": {Lock: "*.csproj", Test: csharpTestDeps, Prepare: csharpPrepare, Missing: nugetMissing},
 }
 
-// DepsFor returns how the language gets its packages. It returns a DepsSkip when the language has no support for deps=, or no support on this machine when sandbox is false.
-func DepsFor(lang string, sandbox bool) (Deps, error) {
+// DepsFor returns how the language gets its packages. test tells if the block is a test block. It returns a DepsSkip when the language has no support for deps= in the mode of the block, or no support on this machine when sandbox is false.
+func DepsFor(lang string, sandbox, test bool) (Deps, error) {
 	d, ok := DepsSupport[lang]
 	if !ok {
 		return d, DepsSkip{lang, "prog run cannot get third-party packages for " + lang}
+	}
+	if test && d.Test == nil {
+		return d, DepsSkip{lang, "prog run cannot run a test block of " + lang + " with deps="}
+	}
+	if !test && d.Program == nil {
+		return d, DepsSkip{lang, "prog run runs a block of " + lang + " with deps= only as a test block"}
 	}
 	if !sandbox && d.Prepare == nil {
 		return d, DepsSkip{lang, "prog run cannot get the packages of " + d.Lock + " on this machine; " + depsNoLocalSupportHint}
@@ -178,23 +194,29 @@ func readDeps(lock string, d Deps) (map[string][]byte, error) {
 
 // WithDeps changes the program of a block with deps= so that it uses the packages of the lock file (spec 07.7). In a sandbox, it builds the image with the packages, or reuses it. On this machine, it gets the packages with no network into the cache directory. It returns a DepsSkip when the packages cannot be had here.
 func (r *Runner) WithDeps(p Program, lock string) (Program, error) {
-	d, err := DepsFor(p.ID, r.Box != nil)
+	d, err := DepsFor(p.ID, r.Box != nil, p.Test)
 	if err != nil {
 		return p, err
 	}
-	if filepath.Base(lock) != d.Lock {
+	if ok, _ := filepath.Match(d.Lock, filepath.Base(lock)); !ok {
 		return p, fmt.Errorf("deps= names %s, but the %s runner reads %s", filepath.Base(lock), p.ID, d.Lock)
 	}
 	files, err := readDeps(lock, d)
 	if err != nil {
 		return p, err
 	}
+	apply := d.Program
+	if p.Test {
+		apply = d.Test
+	}
 	if r.Box != nil {
-		image, err := r.Box.Derive(p.ID, d, files)
-		if err != nil {
-			return p, err
+		image := ""
+		if d.Dockerfile != "" {
+			if image, err = r.Box.Derive(p.ID, d, files); err != nil {
+				return p, err
+			}
 		}
-		q, err := d.Program(p, files, "")
+		q, err := apply(p, files, "")
 		q.Image = image
 		return q, err
 	}
@@ -202,7 +224,13 @@ func (r *Runner) WithDeps(p Program, lock string) (Program, error) {
 	if err != nil {
 		return p, err
 	}
-	return d.Program(p, files, dir)
+	return apply(p, files, dir)
+}
+
+// DepsMissing tells if a failed build of a block with deps= failed because the packages are not there. The block is then a skip with the reason deps, not a failure.
+func DepsMissing(lang string, got RunResult) bool {
+	d, ok := DepsSupport[lang]
+	return ok && d.Missing != nil && got.Phase == "build" && d.Missing.MatchString(got.Stderr+got.Stdout)
 }
 
 // depsJob makes the packages of one lock file once, for all the blocks that use it.
@@ -380,12 +408,13 @@ func javaDeps(p Program, _ map[string][]byte, dir string) (Program, error) {
 	if dir != "" {
 		lib, sep = filepath.Join(dir, "lib", "*"), string(os.PathListSeparator)
 	}
-	// The first step is javac and the last step is java. The command names can be paths, because of -tool.
+	// The first step is javac and the last step is java. The command names can be paths, because of -tool. A step with a class path gets the jars at its end, and javac with no class path gets one.
 	p = cloneSteps(p)
-	p.Steps[0] = insertAfterTool(p.Steps[0], "-cp", lib)
-	for _, s := range p.Steps[1:] {
+	for i, s := range p.Steps {
 		if k := slices.Index(s, "-cp"); k >= 0 && k+1 < len(s) {
 			s[k+1] += sep + lib
+		} else if i == 0 {
+			p.Steps[0] = insertAfterTool(s, "-cp", lib)
 		}
 	}
 	return p, nil
@@ -400,7 +429,7 @@ func javaPrepare(ctx context.Context, dir string) error {
 	if err := os.MkdirAll(lib, 0o755); err != nil {
 		return err
 	}
-	if _, err := runIn(ctx, dir, "mvn", "-o", "-B", "-q", "-f", filepath.Join(dir, "pom.xml"), mavenCopyDependencies, "-DincludeScope=runtime", "-DoutputDirectory="+lib); err != nil {
+	if _, err := runIn(ctx, dir, "mvn", "-o", "-B", "-q", "-f", filepath.Join(dir, "pom.xml"), mavenCopyDependencies, mavenScope, mavenExclude, "-DoutputDirectory="+lib); err != nil {
 		return DepsSkip{"java", "the jars of pom.xml are not all in the local Maven repository of this machine, and the run has no network; " + depsNoLocalSupportHint}
 	}
 	return nil
@@ -439,11 +468,11 @@ func (s *Sandbox) Derive(lang string, d Deps, files map[string][]byte) (string, 
 		s.derived[tag] = j
 	}
 	s.mu.Unlock()
-	j.once.Do(func() { j.err = s.build(base, alias, tag, df, d.Lock, files) })
+	j.once.Do(func() { j.err = s.build(lang, base, alias, tag, df, d.Lock, files) })
 	return tag, j.err
 }
 
-func (s *Sandbox) build(base, alias, tag, dockerfile, lock string, files map[string][]byte) error {
+func (s *Sandbox) build(lang, base, alias, tag, dockerfile, lock string, files map[string][]byte) error {
 	if exec.Command(s.Engine, "image", "inspect", tag).Run() == nil {
 		return nil
 	}
@@ -474,6 +503,10 @@ func (s *Sandbox) build(base, alias, tag, dockerfile, lock string, files map[str
 	cmd := exec.CommandContext(ctx, s.Engine, append(args, dir)...)
 	cmd.Stdout, cmd.Stderr = &out, &out
 	if err := cmd.Run(); err != nil {
+		// A message of the Dockerfile tells that the image of the language has no support for the packages, such as a C++ image with no vcpkg. That is a skip, not a failure.
+		if m := progLine.FindStringSubmatch(out.String()); m != nil {
+			return DepsSkip{lang, strings.TrimSpace(m[1])}
+		}
 		return fmt.Errorf("the image with the packages of %s did not build: %s", lock, buildWhy(out.String(), err))
 	}
 	return nil

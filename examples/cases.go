@@ -30,8 +30,16 @@ type Case struct {
 // ID is the id of the case: the id= of the block, or ex<n> from the order of the blocks.
 func (c *Case) ID() string { return c.Block.Attrs["id"] }
 
-// Mode is run, fails or wrong.
+// Mode is run, fails, wrong or test.
 func (c *Case) Mode() string { return c.Block.Mode() }
+
+// Label is the mode of the case as the result shows it. A test block with fails is "test fails".
+func (c *Case) Label() string {
+	if c.Block.TestFails() {
+		return "test fails"
+	}
+	return c.Mode()
+}
 
 // Deps is the lock file that deps= names, as a path relative to the node directory (spec 07.7). It is the deps= of the block that owns the run, or of another block of the group. It is "" when the program uses the standard library only.
 func (c *Case) Deps() string {
@@ -74,6 +82,14 @@ func (c *Case) Files(p lang.Program) map[string]string {
 	return files
 }
 
+// TestFile is the name of the test file of a test block in the work directory: the file= of the block next to the main file, or the main file.
+func (c *Case) TestFile(p lang.Program) string {
+	if f := c.Block.Attrs["file"]; f != "" {
+		return path.Join(path.Dir(p.Main), f)
+	}
+	return p.Main
+}
+
 // Issue is a broken rule of spec 07.2.
 type Issue struct {
 	File string
@@ -89,6 +105,9 @@ var NorunReasons = []string{"network", "gui", "platform", "hardware", "ub", "vul
 
 // Expects are the kinds of failure signature of spec 07.2.
 var Expects = []string{"compile", "runtime", "exit", "exception", "error", "panic", "timeout", "sanitizer"}
+
+// TestFailure is the failure signature of a test block with fails: at least one test fails (spec 07.11).
+const TestFailure = "test-failure"
 
 // Collect gives the cases of one Markdown file, and the issues of the rules X01 and X02. The blocks of the languages that prog run can run need a mode; the other blocks, such as text or json, do not.
 func Collect(file, src string, line0 int) ([]Case, []Issue) {
@@ -130,9 +149,9 @@ func Collect(file, src string, line0 int) ([]Case, []Issue) {
 		ids[b.Attrs["id"]] = b
 		switch m := b.Mode(); m {
 		case "":
-			bad(b, "X01", "the %s block needs one of run, fails, wrong or norun", b.Lang)
+			bad(b, "X01", "the %s block needs one of run, fails, wrong, test or norun", b.Lang)
 		case "many":
-			bad(b, "X01", "the %s block has more than one of run, fails, wrong and norun", b.Lang)
+			bad(b, "X01", "the %s block has more than one of run, fails, wrong, test and norun", b.Lang)
 		case "norun":
 			if r := b.Attrs["reason"]; !slices.Contains(NorunReasons, r) {
 				bad(b, "X01", "norun needs reason= with one of %s, not %q", strings.Join(NorunReasons, ", "), r)
@@ -140,8 +159,19 @@ func Collect(file, src string, line0 int) ([]Case, []Issue) {
 		case "fails":
 			sig := b.Attrs["expect"]
 			kind, _, _ := strings.Cut(sig, ":")
-			if !slices.Contains(Expects, kind) {
+			switch {
+			case sig == TestFailure:
+				bad(b, "X04", "expect=%s is for a test block; write test fails", TestFailure)
+			case !slices.Contains(Expects, kind):
 				bad(b, "X04", "fails needs expect= with one of %s, not %q", strings.Join(Expects, ", "), sig)
+			}
+		case "test":
+			sig, ok := b.Attrs["expect"]
+			switch {
+			case b.Has("fails") && sig != TestFailure:
+				bad(b, "X04", "test fails needs expect=%s, not %q", TestFailure, sig)
+			case !b.Has("fails") && ok:
+				bad(b, "X04", "a test block with expect= needs fails; write test fails expect=%s", TestFailure)
 			}
 		}
 		if d, ok := b.Attrs["deps"]; ok && !validDeps(d) {
@@ -209,8 +239,7 @@ func Collect(file, src string, line0 int) ([]Case, []Issue) {
 		var owner *Block
 		var outputs []*Block
 		for _, p := range parts {
-			switch p.Mode() {
-			case "run", "fails", "wrong":
+			if p.Runs() {
 				owner = p
 			}
 			outputs = append(outputs, outs[p]...)
@@ -227,7 +256,7 @@ func Collect(file, src string, line0 int) ([]Case, []Issue) {
 			}
 			c.Stdin = in.Code
 		}
-		if (owner.Mode() == "run" || owner.Mode() == "wrong") && len(outputs) == 0 && owner.Attrs["match"] != "any" {
+		if (owner.Mode() == "run" || owner.Mode() == "wrong" || (owner.Mode() == "test" && !owner.TestFails())) && len(outputs) == 0 && owner.Attrs["match"] != "any" {
 			bad(owner, "X02", "the %s block %s needs an output block; prog run -update writes it", owner.Mode(), owner.Attrs["id"])
 		}
 		cases = append(cases, c)

@@ -26,9 +26,17 @@ type Program struct {
 	Image string
 	// Seed is a directory on this machine. RunProgram copies its files into the work directory before the files of the block. A block with deps= gets the packages of its lock file this way when it runs on this machine.
 	Seed string
+	// Files are more files that RunProgram writes into the work directory after the seed and before the files of the block, such as the .csproj of a C# test block.
+	Files map[string][]byte
+	// Test is true for the test runner of a test block (spec 07.11). A block with deps= then uses the Test function of DepsSupport.
+	Test bool
+	// Report is the stream of the report of a test runner: "" for stdout, or stderr. It is the default stream of the output block of a test block.
+	Report string
+	// Setup is the number of first steps that only prepare the directory, such as go mod init. The flags of a block go to the step after them.
+	Setup int
 }
 
-// Programs are the languages that prog run can run. Regex and HTML have no runner, so their blocks are norun.
+// Programs are the languages that prog run can run. Regex and HTML have no runner, so their blocks are norun. The test blocks use TestPrograms.
 var Programs = map[string]Program{
 	"python":     {ID: "python", Main: "main.py", Tools: []string{"python3"}, Steps: [][]string{{"python3", "main.py"}}, Version: []string{"python3", "--version"}},
 	"javascript": {ID: "javascript", Main: "main.js", Tools: []string{"node"}, Steps: [][]string{{"node", "main.js"}}, Version: []string{"node", "--version"}},
@@ -100,6 +108,11 @@ func (r *Runner) RunProgram(p Program, files map[string]string, stdin string, ar
 			return res, err
 		}
 	}
+	for name, body := range p.Files {
+		if err := os.WriteFile(filepath.Join(dir, filepath.FromSlash(name)), body, 0o644); err != nil {
+			return res, err
+		}
+	}
 	for name, body := range files {
 		full := filepath.Join(dir, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
@@ -166,12 +179,12 @@ func (r *Runner) RunProgram(p Program, files map[string]string, stdin string, ar
 // clean replaces the path of the run directory with $WORK, so that the output is the same on each run (spec 07.6).
 func clean(s, dir string) string {
 	s = strings.ReplaceAll(s, "\r\n", "\n")
+	// macOS gives the temporary directory as /var/... or /tmp/..., and the tools may print the real path /private/var/... or /private/tmp/.... The real path goes first, because it holds the other one.
+	if strings.HasPrefix(dir, "/var/") || strings.HasPrefix(dir, "/tmp/") {
+		s = strings.ReplaceAll(s, "/private"+dir, "$WORK")
+	}
 	for _, d := range []string{dir, filepath.ToSlash(dir)} {
 		s = strings.ReplaceAll(s, d, "$WORK")
-	}
-	// macOS gives the temporary directory as /var/... and the tools may print the real path /private/var/....
-	if strings.HasPrefix(dir, "/var/") {
-		s = clean(s, "/private"+dir)
 	}
 	return s
 }

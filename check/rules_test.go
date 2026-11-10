@@ -211,3 +211,43 @@ func TestS08(t *testing.T) {
 		}
 	}
 }
+
+func TestX08(t *testing.T) {
+	run := "```python run match=any\nprint(1)\n```\n\n"
+	norun := "```python norun reason=platform\nimport winreg\n```\n\n"
+	fragment := "```go norun reason=fragment group=g file=cart.go\npackage cart\n```\n\n```go test group=g match=any\npackage cart\n```\n\n"
+	tests := []struct {
+		name, area, body, example, want string
+	}{
+		{"none", "", run, run, ""},
+		{"no blocks", "", "Text.\n", "", ""},
+		{"one of ten", "", strings.Repeat(run, 6), norun + strings.Repeat(run, 3), ""},
+		{"one of five", "", run + norun, strings.Repeat(run, 3), "1 of the 5 code blocks of the node are norun, which is more than 10%"},
+		{"a fragment of a group that runs", "", fragment, run, ""},
+		{"two of five in an exempt area", "mobile-and-desktop/android", run + norun, norun + run + run, ""},
+		{"three of five in an exempt area", "distributed-and-cloud", norun + norun, norun + run + run, "3 of the 5 code blocks of the node are norun, which is more than 40%"},
+	}
+	for _, tc := range tests {
+		c := fixture(t, nil)
+		n := c.BySlug["search-a-sorted-list"]
+		n.Body, n.Examples = tc.body, nil
+		if tc.example != "" {
+			n.Examples = []node.Example{{Lang: "python", Body: tc.example}}
+		}
+		if tc.area != "" {
+			n.Area = tc.area
+		}
+		var got []string
+		for _, f := range fired(Run(c, Options{}), "X08") {
+			if strings.HasPrefix(f, n.Rel+"/") {
+				got = append(got, f)
+			}
+		}
+		switch {
+		case tc.want == "" && len(got) > 0:
+			t.Errorf("%s: %v, want no finding", tc.name, got)
+		case tc.want != "" && (len(got) != 1 || !strings.Contains(got[0], tc.want) || !strings.Contains(got[0], ": level: ")):
+			t.Errorf("%s: %v, want a level finding with %q", tc.name, got, tc.want)
+		}
+	}
+}

@@ -95,6 +95,7 @@ var Rules = map[string]string{
 	"K05": "each probe that has a release before version_added has a failure signature",
 	"X05": "each expect=error:<code> names a diagnostic card or node of the language of the block",
 	"X06": "no node slug is a reserved word, a language id or an area id",
+	"X08": "norun blocks are at most 10% of the code blocks of a node, or 40% in embedded-and-hardware, graphics-and-games-programming, mobile-and-desktop and distributed-and-cloud",
 }
 
 // Options select what to check.
@@ -164,6 +165,7 @@ func Run(c *node.Corpus, opt Options) []Finding {
 		r.impls(n)
 		r.links(n)
 		r.diagnostics(n)
+		r.norun(n)
 		r.contracts(n)
 		r.compat(n)
 		r.matrix(n)

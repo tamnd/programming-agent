@@ -35,11 +35,11 @@ func (b *Block) Has(w string) bool {
 // Deps is the value of deps=: the path of a lock file, relative to the node directory (spec 07.7). It is "" when the block has no deps=.
 func (b *Block) Deps() string { return b.Attrs["deps"] }
 
-// Mode is the run mode of the block: run, fails, wrong or norun. It is "" when the block has none, and "many" when it has more than one.
+// Mode is the run mode of the block: run, fails, wrong, test or norun. It is "" when the block has none, and "many" when it has more than one. A test block with fails is a test block that must fail (spec 07.11), so its mode is test.
 func (b *Block) Mode() string {
 	mode := ""
-	for _, m := range []string{"run", "fails", "wrong", "norun"} {
-		if b.Has(m) {
+	for _, m := range []string{"run", "fails", "wrong", "test", "norun"} {
+		if b.Has(m) && (m != "fails" || !b.Has("test")) {
 			if mode != "" {
 				return "many"
 			}
@@ -47,6 +47,18 @@ func (b *Block) Mode() string {
 		}
 	}
 	return mode
+}
+
+// TestFails tells if the block is a test block with fails, which shows a test that fails on purpose (spec 07.11).
+func (b *Block) TestFails() bool { return b.Mode() == "test" && b.Has("fails") }
+
+// Runs tells if prog run runs the block: its mode is run, fails, wrong or test.
+func (b *Block) Runs() bool {
+	switch b.Mode() {
+	case "run", "fails", "wrong", "test":
+		return true
+	}
+	return false
 }
 
 // aliases maps the other names of a language in an info string to its id.
