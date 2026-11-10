@@ -53,6 +53,8 @@ var Recipes = map[string]Recipe{
 	"java":       {ID: "java", Tools: []string{"javac", "java"}, Version: []string{"javac", "-version"}, Run: java},
 	"kotlin":     {ID: "kotlin", Tools: []string{"kotlinc", "java"}, Version: []string{"kotlinc", "-version"}, Run: kotlin},
 	"csharp":     {ID: "csharp", Tools: []string{"dotnet"}, Version: []string{"dotnet", "--version"}, Run: csharp},
+	"bash":       {ID: "bash", Tools: []string{"bash", "bats"}, Version: []string{"bash", "--version"}, Run: bash},
+	"powershell": {ID: "powershell", Tools: []string{"pwsh"}, Version: []string{"pwsh", "-NoProfile", "-Version"}, Run: powershell},
 }
 
 // Runner runs tests and keeps the results.
@@ -225,6 +227,33 @@ func python(r *Runner, dir string, _ *node.Node, _ node.Impl) ([][]string, error
 		return nil, Skip{"python", "pytest"}
 	}
 	return [][]string{{"python3", "-m", "pytest", "-q", "-p", "no:cacheprovider", "."}}, nil
+}
+
+// bash runs the .bats files with bats-core. A test file loads the script with source "$BATS_TEST_DIRNAME/<name>.sh".
+func bash(r *Runner, _ string, _ *node.Node, im node.Impl) ([][]string, error) {
+	tests := files(im, true, ".bats")
+	if len(tests) == 0 {
+		return nil, errors.New("bash: no .bats file")
+	}
+	// The pages target Bash 4.4 or later (spec 08.2). macOS has Bash 3.2.
+	if r.Box == nil && !r.Generate && exec.Command("bash", "-c", "((BASH_VERSINFO[0] > 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] >= 4)))").Run() != nil {
+		return nil, Skip{"bash", "bash 4.4"}
+	}
+	return [][]string{append([]string{"bats", "--print-output-on-failure"}, tests...)}, nil
+}
+
+// pesterScript runs the Pester 5 tests of the directory. Pester sets the exit code to the number of failed tests in CI mode.
+const pesterScript = `$ErrorActionPreference = 'Stop'; Import-Module Pester -MinimumVersion 5.5; $c = New-PesterConfiguration; $c.Run.Path = '.'; $c.Run.Exit = $true; $c.Output.Verbosity = 'Normal'; Invoke-Pester -Configuration $c`
+
+// powershell runs the .Tests.ps1 files with Pester 5. The runner image has Pester. On this machine, Pester must be in the module path.
+func powershell(r *Runner, _ string, _ *node.Node, im node.Impl) ([][]string, error) {
+	if len(files(im, true, ".Tests.ps1")) == 0 {
+		return nil, errors.New("powershell: no .Tests.ps1 file")
+	}
+	if r.Box == nil && !r.Generate && exec.Command("pwsh", "-NoProfile", "-Command", "if (-not (Get-Module -ListAvailable Pester | Where-Object Version -ge '5.5')) { exit 1 }").Run() != nil {
+		return nil, Skip{"powershell", "Pester 5"}
+	}
+	return [][]string{{"pwsh", "-NoProfile", "-NonInteractive", "-Command", pesterScript}}, nil
 }
 
 func golang(_ *Runner, dir string, _ *node.Node, _ node.Impl) ([][]string, error) {

@@ -11,3 +11,23 @@ func TestIsBuildFile(t *testing.T) {
 		}
 	}
 }
+
+func TestIsTestFile(t *testing.T) {
+	for name, want := range map[string]bool{
+		"test_line_stats.py":      true,
+		"line_stats_test.go":      true,
+		"lineStats.test.js":       true,
+		"LineStatsTest.java":      true,
+		"LineStatsTests.cs":       true,
+		"test_line_stats.bats":    true,
+		"line_stats.bats":         true,
+		"Get-LineStats.Tests.ps1": true,
+		"line_stats.sh":           false,
+		"Get-LineStats.ps1":       false,
+		"line_stats.rs":           false,
+	} {
+		if got := IsTestFile(name); got != want {
+			t.Errorf("IsTestFile(%q) = %v, want %v", name, got, want)
+		}
+	}
+}

@@ -448,13 +448,13 @@ func (n *Node) Example(lang string) *Example {
 }
 
 // IsTestFile tells if a file name is a native test, by the conventions of spec 08.3.
-// Examples: test_binary_search.py, binary_search_test.go, binarySearch.test.js, BinarySearchTest.java, binary_search_tests.rs.
+// Examples: test_binary_search.py, binary_search_test.go, binarySearch.test.js, BinarySearchTest.java, binary_search_tests.rs, binary_search.bats, BinarySearch.Tests.ps1.
 func IsTestFile(name string) bool {
 	low := strings.ToLower(name)
 	stem := strings.TrimSuffix(low, filepath.Ext(low))
 	stem = strings.TrimSuffix(stem, ".test")
 	switch {
-	case strings.HasPrefix(low, "test_"), strings.Contains(low, "_test."), strings.Contains(low, ".test."), strings.Contains(low, "_spec."):
+	case strings.HasPrefix(low, "test_"), strings.Contains(low, "_test."), strings.Contains(low, ".test."), strings.Contains(low, "_spec."), strings.HasSuffix(low, ".bats"):
 		return true
 	case strings.HasSuffix(stem, "test"), strings.HasSuffix(stem, "tests"):
 		return true
