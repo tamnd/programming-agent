@@ -4,6 +4,8 @@ package examples
 
 import (
 	"fmt"
+	"path"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -21,6 +23,8 @@ type Case struct {
 	Outputs []*Block
 	// Stdin is the text of the input block that stdin= names.
 	Stdin string
+	// Dir is the directory of the node. The path of deps= is relative to it.
+	Dir string
 }
 
 // ID is the id of the case: the id= of the block, or ex<n> from the order of the blocks.
@@ -29,6 +33,28 @@ func (c *Case) ID() string { return c.Block.Attrs["id"] }
 // Mode is run, fails or wrong.
 func (c *Case) Mode() string { return c.Block.Mode() }
 
+// Deps is the lock file that deps= names, as a path relative to the node directory (spec 07.7). It is the deps= of the block that owns the run, or of another block of the group. It is "" when the program uses the standard library only.
+func (c *Case) Deps() string {
+	if d := c.Block.Deps(); d != "" {
+		return d
+	}
+	for _, b := range c.Parts {
+		if d := b.Deps(); d != "" {
+			return d
+		}
+	}
+	return ""
+}
+
+// LockPath is the path of the lock file of deps= on this machine, or "".
+func (c *Case) LockPath() string {
+	d := c.Deps()
+	if d == "" {
+		return ""
+	}
+	return filepath.Join(c.Dir, filepath.FromSlash(d))
+}
+
 // Files gives the files of the program. The parts without file= go to the main file of the language, in order.
 func (c *Case) Files(p lang.Program) map[string]string {
 	files := map[string]string{}
@@ -36,6 +62,9 @@ func (c *Case) Files(p lang.Program) map[string]string {
 		name := b.Attrs["file"]
 		if name == "" {
 			name = p.Main
+		} else {
+			// A file of a multi-file example goes next to the main file. A Cargo project has the main file in src.
+			name = path.Join(path.Dir(p.Main), name)
 		}
 		if files[name] != "" && !strings.HasSuffix(files[name], "\n") {
 			files[name] += "\n"
@@ -114,6 +143,9 @@ func Collect(file, src string, line0 int) ([]Case, []Issue) {
 			if !slices.Contains(Expects, kind) {
 				bad(b, "X04", "fails needs expect= with one of %s, not %q", strings.Join(Expects, ", "), sig)
 			}
+		}
+		if d, ok := b.Attrs["deps"]; ok && !validDeps(d) {
+			bad(b, "X01", "deps= is the path of a lock file in the node directory, such as deps/rust/Cargo.lock, not %q", d)
 		}
 		if t := b.Attrs["timeout"]; t != "" {
 			if s, err := strconv.Atoi(t); err != nil || s < 1 || s > 30 {
@@ -202,4 +234,9 @@ func Collect(file, src string, line0 int) ([]Case, []Issue) {
 	}
 	slices.SortStableFunc(issues, func(a, b Issue) int { return a.Line - b.Line })
 	return cases, issues
+}
+
+// validDeps tells if the value of deps= is a path that stays in the node directory. The path uses slashes on every system.
+func validDeps(d string) bool {
+	return d != "" && !strings.Contains(d, "\\") && filepath.IsLocal(filepath.FromSlash(d)) && path.Clean(d) == d
 }

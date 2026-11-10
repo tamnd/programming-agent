@@ -32,6 +32,9 @@ func (b *Block) Has(w string) bool {
 	return slices.Contains(b.Words, w)
 }
 
+// Deps is the value of deps=: the path of a lock file, relative to the node directory (spec 07.7). It is "" when the block has no deps=.
+func (b *Block) Deps() string { return b.Attrs["deps"] }
+
 // Mode is the run mode of the block: run, fails, wrong or norun. It is "" when the block has none, and "many" when it has more than one.
 func (b *Block) Mode() string {
 	mode := ""
