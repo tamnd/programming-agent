@@ -67,6 +67,13 @@ jobs:
         env:
           PROG_TEST_PYTHON_IMAGE: ${{ env.ID }}
         run: go test ./lang -run TestSandboxNoNetwork -v
+      # A block with deps= runs in an image with the packages of its lock file. The test builds that image on top of this image.
+      - name: Test the packages of a lock file
+        if: matrix.image == 'rust' || matrix.image == 'jvm'
+        env:
+          PROG_TEST_RUST_IMAGE: ${{ matrix.image == 'rust' && env.ID || '' }}
+          PROG_TEST_JVM_IMAGE: ${{ matrix.image == 'jvm' && env.ID || '' }}
+        run: go test ./lang -run TestDepsImage -v
       # The custom checkers run in the Python image. The official image is enough for them, so each job tests one image only.
       - name: Run the tests of the content repository in the image
         if: matrix.image != 'lean'

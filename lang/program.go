@@ -22,6 +22,10 @@ type Program struct {
 	Steps [][]string
 	// Version prints the version of the toolchain, for the record of the run.
 	Version []string
+	// Image is the image that runs the steps in a sandbox. It is empty for the image of the language. A block with deps= runs in an image that has the packages of its lock file (spec 07.7).
+	Image string
+	// Seed is a directory on this machine. RunProgram copies its files into the work directory before the files of the block. A block with deps= gets the packages of its lock file this way when it runs on this machine.
+	Seed string
 }
 
 // Programs are the languages that prog run can run. Regex and HTML have no runner, so their blocks are norun.
@@ -91,6 +95,11 @@ func (r *Runner) RunProgram(p Program, files map[string]string, stdin string, ar
 		defer os.RemoveAll(dir)
 	}
 	defer r.reap()
+	if p.Seed != "" {
+		if err := copyTree(p.Seed, dir); err != nil {
+			return res, err
+		}
+	}
 	for name, body := range files {
 		full := filepath.Join(dir, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
@@ -111,7 +120,11 @@ func (r *Runner) RunProgram(p Program, files map[string]string, stdin string, ar
 		}
 		argv := c
 		if r.Box != nil {
-			argv = r.Box.Argv(p.ID, last && stdin != "", []Mount{{Dir: dir}}, c)
+			image := p.Image
+			if image == "" {
+				image = r.Box.Images[p.ID]
+			}
+			argv = r.Box.ArgvImage(image, last && stdin != "", []Mount{{Dir: dir}}, c)
 		}
 		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 		cmd.Dir = dir

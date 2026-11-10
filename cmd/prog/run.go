@@ -108,6 +108,7 @@ func cmdRun(args []string) error {
 				if len(want) > 0 && !want[k.Block.Lang] {
 					continue
 				}
+				k.Dir = n.Dir
 				if code, ok := strings.CutPrefix(k.Block.Attrs["expect"], "error:"); ok {
 					// A diagnostic is a card or a node, with the slug <lang>/errors/<code> (rule X05).
 					if slug := node.FullSlug("diagnostic", k.Block.Lang, code); c.BySlug[slug] == nil && c.CardBySlug[slug] == nil {

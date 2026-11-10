@@ -3,6 +3,7 @@
 package examples
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"regexp"
@@ -24,6 +25,8 @@ type Result struct {
 	Mode   string `json:"mode"`
 	Status string `json:"status"` // pass, fail or skip
 	Why    string `json:"why,omitempty"`
+	// Reason is a short code for the cause of a skip, such as deps when prog run cannot get the packages of the block here (spec 07.7).
+	Reason string `json:"reason,omitempty"`
 	Tool   string `json:"tool,omitempty"`
 	Ms     int64  `json:"ms"`
 	// Updated is set by Update when the output blocks of the case were written from this run.
@@ -82,6 +85,21 @@ func (x *Runner) Run(c *Case) Result {
 	if impl := b.Attrs["impl"]; impl != "" {
 		return skip("the block runs on the implementation " + impl + " in the version matrix")
 	}
+	skipDeps := func(err error) Result {
+		var ds lang.DepsSkip
+		if errors.As(err, &ds) {
+			res.Reason = "deps"
+			return skip("deps: " + ds.Why)
+		}
+		return fail("%v", err)
+	}
+	lock := c.LockPath()
+	if lock != "" {
+		// A language with no support for deps= is a skip, not a failure, so look before the toolchain.
+		if _, err := lang.DepsFor(p.ID, x.R.Box != nil); err != nil {
+			return skipDeps(err)
+		}
+	}
 	tool, err := x.toolchain(p)
 	if err != nil {
 		return skip(err.Error())
@@ -100,6 +118,11 @@ func (x *Runner) Run(c *Case) Result {
 		}
 	}
 	p = adjust(p, b)
+	if lock != "" {
+		if p, err = x.R.WithDeps(p, lock); err != nil {
+			return skipDeps(err)
+		}
+	}
 	timeout := 10 * time.Second
 	if t, err := strconv.Atoi(b.Attrs["timeout"]); err == nil && t > 0 && t <= 30 {
 		timeout = time.Duration(t) * time.Second
