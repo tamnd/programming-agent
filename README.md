@@ -32,6 +32,7 @@ Run these commands in a clone of tamnd/programming.
 | `prog mint` | Gives each provisional id `NEW-<slug>` a permanent tag. Add `-dry-run` to see the tags first. |
 | `prog mv <slug> <new-slug>` | Renames or moves a node. The old URL redirects. The tag does not change. |
 | `prog check` | Runs the audit rules of spec 15. |
+| `prog run closures` | Runs the code blocks of a page and compares the output with the output blocks. Add `-update` to write the output blocks from the runs. The blocks run in the sandbox, in CI, or on your computer with `-unsafe-local`. |
 | `prog status closures` | Shows the ladders of a node and what the next level needs. |
 | `prog site serve` | Renders the site and serves it on your computer. It renders again when a file changes. |
 | `prog site check` | Renders the site and checks each internal link. |
@@ -53,6 +54,7 @@ The exit codes are: 0 for success, 1 when a check finds a problem, 2 for a usage
 | `contract` | The contracts and the shared cases of tasks (spec 10). |
 | `formal` | Builds the Lean package and checks the axiom policy. |
 | `viz` | Bundles the scenes with esbuild and checks them in a JavaScript runtime. |
+| `examples` | Reads the code blocks of the pages, runs them and checks the output (spec 07). |
 | `markup` | Markdown, code blocks and math. |
 | `katex` | Renders TeX to HTML on the server. |
 | `site` | The templates, assets and pages of the site. |

@@ -66,6 +66,7 @@ func init() {
 		{"status", "show the ladders of a node and what the next level needs", cmdStatus},
 		{"gen", "write the build tree of each language to build/lang", cmdGen},
 		{"test", "run the native tests and the shared cases", cmdTest},
+		{"run", "run the code blocks of the pages and check their output; -update writes it", cmdRun},
 		{"lean", "build the Lean package and check its axioms: lean build", cmdLean},
 		{"viz", "bundle and check the scenes: viz build | check", cmdViz},
 		{"oracle", "run the oracle of a problem on its cases or on given arguments", cmdOracle},
