@@ -86,6 +86,11 @@ var Rules = map[string]string{
 	"L09": "the module path mirrors the node path",
 	"L10": "each module builds in at most 60 seconds; prog lean build -time reports it, and a module above 300 seconds blocks",
 	"X01": "each link in a node to /<slug>/ or /<owner>/<slug>/ names a node, an area or a site page",
+	"K01": "each compat file follows the schema of spec 09.2, and each column and probe exists",
+	"K02": "each version in a compat entry is a release of its implementation in registers/implementations.yaml",
+	"K03": "the field since of the front matter agrees with the compat entry",
+	"K04": "no version claim in prose; a version belongs in a compat entry",
+	"K05": "each probe that has a release before version_added has a failure signature",
 	"X06": "no node slug is a reserved word, a language id or an area id",
 }
 
@@ -156,6 +161,7 @@ func Run(c *node.Corpus, opt Options) []Finding {
 		r.impls(n)
 		r.links(n)
 		r.contracts(n)
+		r.compat(n)
 		r.leanNode(n)
 	}
 	r.leanDecls()

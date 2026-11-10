@@ -1,0 +1,3 @@
+nonlocal.py:
+  output: "1\n"
+  fails_with: "SyntaxError"

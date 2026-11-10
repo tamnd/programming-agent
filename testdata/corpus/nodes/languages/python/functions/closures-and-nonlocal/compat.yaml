@@ -1,0 +1,8 @@
+closures-and-nonlocal:
+  description: "The nonlocal statement"
+  spec: {url: "https://docs.python.org/3/reference/simple_stmts.html#the-nonlocal-statement"}
+  support:
+    cpython: {version_added: "3.0", probe: probes/nonlocal.py}
+    pypy:
+      - version_added: false
+        note: "The test corpus has no data for PyPy."

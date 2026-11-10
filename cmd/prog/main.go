@@ -70,6 +70,7 @@ func init() {
 		{"lean", "build the Lean package and check its axioms: lean build", cmdLean},
 		{"viz", "bundle and check the scenes: viz build | check", cmdViz},
 		{"oracle", "run the oracle of a problem on its cases or on given arguments", cmdOracle},
+		{"compat", "run the probes of the compat entries: compat probe", cmdCompat},
 		{"site", "render and preview the site: site build | serve | check", cmdSite},
 		{"version", "print the version", func([]string) error { fmt.Println("prog", ver()); return nil }},
 		{"help", "show this help", func([]string) error { usage(os.Stdout); return nil }},

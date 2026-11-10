@@ -33,6 +33,7 @@ type NodePage struct {
 	Solvers  []SolverRow
 	Impls    []ImplView
 	Examples []ExampleView
+	Compat   *CompatView
 	Facts    []FactRow
 	Guide    []Tile
 	Glance   []FactRow
@@ -332,6 +333,13 @@ func (b *builder) nodePage(n *node.Node) (*NodePage, error) {
 			html = insertAfterSection(html, b.snippet("formal-body", p), "formal-proof")
 		} else {
 			html = insertBefore(html, b.snippet("formal-section", p), "history", "exercises", "references")
+		}
+	}
+	if p.Compat = b.compatView(n); p.Compat != nil {
+		if hasH2(html, "versions") {
+			html = insertAtSection(html, b.snippet("compat-body", p), "versions")
+		} else {
+			html = insertBefore(html, b.snippet("compat-section", p), "pitfalls", "comparison", "implementation-notes", "references")
 		}
 	}
 	p.Examples = b.exampleViews(n)

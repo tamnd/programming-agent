@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/tamnd/programming-agent/compat"
 )
 
 // Area is one entry of topics/areas.yaml (spec 05.2).
@@ -98,6 +100,9 @@ type Corpus struct {
 	CardBySlug map[string]*Card
 	// CardErrors are the card rows that could not be read. Package check reports them as C01.
 	CardErrors []error
+	// Impls is registers/implementations.yaml: the compat columns of each language (spec 09.2). Probes are the results of prog compat probe, from manifests/probes.jsonl.
+	Impls  compat.Register
+	Probes compat.Results
 }
 
 // Load reads the whole content tree at root.
@@ -151,6 +156,13 @@ func Load(root string) (*Corpus, error) {
 	}
 	c.Tags = tags
 	if c.OldSlugs, err = ReadAliases(filepath.Join(root, "registers", "aliases.reg")); err != nil {
+		return nil, err
+	}
+
+	if c.Impls, err = compat.ReadRegister(root); err != nil {
+		return nil, err
+	}
+	if c.Probes, err = compat.ReadResults(root); err != nil {
 		return nil, err
 	}
 

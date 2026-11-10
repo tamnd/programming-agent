@@ -106,3 +106,11 @@
 
 {{define "refs-section"}}<h2 id="references">References</h2>
 {{template "refs-list" .}}{{end}}
+
+{{define "compat-body"}}{{with .Compat}}<div class="table-wrap"><table class="compat"><thead><tr><th scope="col">Feature</th>{{range .Columns}}<th scope="col">{{.Name}}</th>{{end}}</tr></thead><tbody>{{range .Rows}}<tr id="compat-{{.Key}}"><th scope="row">{{.Description}}</th>{{range .Cells}}<td>{{range .Lines}}<div class="c-{{.Class}}">{{.Text}}{{if .Verified}} <span class="verified" title="A probe proves this version">verified</span>{{end}}{{if .Detail}} <span class="detail">({{.Detail}})</span>{{end}}{{range .Notes}}<sup><a href="#compat-note-{{.}}">{{.}}</a></sup>{{end}}</div>{{else}}<span class="none">·</span>{{end}}</td>{{end}}</tr>{{end}}</tbody></table></div>
+{{if .Notes}}<ol class="compat-notes">{{range $i, $n := .Notes}}<li id="compat-note-{{inc $i}}">{{$n}}</li>{{end}}</ol>{{end}}
+{{with compatSummary .}}<p class="compat-summary">{{.}}</p>{{end}}{{end}}
+{{end}}
+
+{{define "compat-section"}}<h2 id="versions">Versions</h2>
+{{template "compat-body" .}}{{end}}
