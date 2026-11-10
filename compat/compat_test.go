@@ -133,7 +133,7 @@ func TestProbe(t *testing.T) {
 	if !r.Pass.OK || r.Fail == nil || !r.Fail.OK || r.Fail.Version != "3.9" || !r.Verified(r.Hash) {
 		t.Fatalf("result = %+v, fail = %+v", r, r.Fail)
 	}
-	if !strings.Contains(runs[0], "--network none") || !strings.Contains(runs[0], "/probe/m.py") || !strings.Contains(runs[0], dir+"/probes:/probe:ro") {
+	if !strings.Contains(runs[0], "--network none") || !strings.Contains(runs[0], "/probe/m.py") || !strings.Contains(runs[0], filepath.Join(dir, "probes")+":/probe:ro") {
 		t.Errorf("run = %s", runs[0])
 	}
 	// With no failure signature, the run on the release before cannot count.
