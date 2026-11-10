@@ -26,7 +26,7 @@ func TestTestProgramFor(t *testing.T) {
 		"javascript": "node --test --test-reporter=spec {test}",
 		"typescript": "node --test --test-reporter=spec {test}",
 		"go":         "go mod init example | go test -v -count=1 .",
-		"rust":       "rustc --edition 2024 --test -o main_test {test} | ./main_test --test-threads=1",
+		"rust":       "rustc --edition 2024 --test -o main_test.exe {test} | ./main_test.exe --test-threads=1",
 		"java":       "javac -d classes -cp /opt/prog/junit.jar {sources} | java -cp classes:/opt/prog/junit.jar org.junit.platform.console.ConsoleLauncher execute --disable-banner --disable-ansi-colors --details=tree --scan-class-path",
 	} {
 		p, err := TestProgramFor(lang, false)
@@ -115,8 +115,8 @@ func TestTestDepsPrograms(t *testing.T) {
 
 	cpp, _ := TestProgramFor("cpp", true)
 	for manifest, want := range map[string]string{
-		`{"name": "x", "dependencies": ["fmt", "gtest"]}`:          "c++ -std=c++23 -Wall -I/opt/prog/include -L/opt/prog/lib -o main_test {sources} -lgtest_main -lgtest -pthread | ./main_test",
-		`{"dependencies": [{"name": "catch2", "version>=": "3"}]}`: "c++ -std=c++23 -Wall -I/opt/prog/include -L/opt/prog/lib -o main_test {sources} -lCatch2Main -lCatch2 | ./main_test --order decl",
+		`{"name": "x", "dependencies": ["fmt", "gtest"]}`:          "c++ -std=c++23 -Wall -I/opt/prog/include -L/opt/prog/lib -o main_test.exe {sources} -lgtest_main -lgtest -pthread | ./main_test.exe",
+		`{"dependencies": [{"name": "catch2", "version>=": "3"}]}`: "c++ -std=c++23 -Wall -I/opt/prog/include -L/opt/prog/lib -o main_test.exe {sources} -lCatch2Main -lCatch2 | ./main_test.exe --order decl",
 	} {
 		p, err := cppTestDeps(cpp, map[string][]byte{"vcpkg.json": []byte(manifest)}, "")
 		if err != nil || steps(p) != want {

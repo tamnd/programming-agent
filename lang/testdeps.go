@@ -49,7 +49,7 @@ func cppTestDeps(p Program, files map[string][]byte, _ string) (Program, error) 
 		return p, err
 	}
 	p = cloneSteps(p)
-	build := []string{"c++", "-std=c++23", "-Wall", "-I" + imageCppInclude, "-L" + imageCppLib, "-o", "main_test", ArgSources}
+	build := []string{"c++", "-std=c++23", "-Wall", "-I" + imageCppInclude, "-L" + imageCppLib, "-o", "main_test.exe", ArgSources}
 	p.Steps = [][]string{append(build, libs...), run}
 	return p, nil
 }
@@ -75,10 +75,10 @@ func cppTestFramework(manifest []byte) (libs, run []string, err error) {
 		}
 		switch name {
 		case "gtest":
-			return []string{"-lgtest_main", "-lgtest", "-pthread"}, []string{"./main_test"}, nil
+			return []string{"-lgtest_main", "-lgtest", "-pthread"}, []string{"./main_test.exe"}, nil
 		case "catch2":
 			// Catch2 3 can run the tests in a random order. The order of the file gives a stable report.
-			return []string{"-lCatch2Main", "-lCatch2"}, []string{"./main_test", "--order", "decl"}, nil
+			return []string{"-lCatch2Main", "-lCatch2"}, []string{"./main_test.exe", "--order", "decl"}, nil
 		}
 	}
 	return nil, nil, errors.New("deps: the vcpkg.json of a C++ test block names no test framework; add gtest or catch2 to its dependencies")

@@ -36,7 +36,7 @@ var TestPrograms = map[string]Program{
 	"typescript": {ID: "typescript", Main: "main.test.ts", Tools: []string{"node"}, Steps: [][]string{{"node", "--test", "--test-reporter=spec", ArgTest}}, Version: []string{"node", "--version"}, Test: true},
 	// go mod init writes the go.mod of the module with the version of the toolchain, so that the language version is the version of the toolchain. -count=1 turns off the cache of the test results.
 	"go":     {ID: "go", Main: "main_test.go", Tools: []string{"go"}, Steps: [][]string{{"go", "mod", "init", "example"}, {"go", "test", "-v", "-count=1", "."}}, Version: []string{"go", "version"}, Test: true, Setup: 1},
-	"rust":   {ID: "rust", Main: "main.rs", Tools: []string{"rustc"}, Steps: [][]string{{"rustc", "--edition", "2024", "--test", "-o", "main_test", ArgTest}, {"./main_test", "--test-threads=1"}}, Version: []string{"rustc", "--version"}, Test: true},
+	"rust":   {ID: "rust", Main: "main.rs", Tools: []string{"rustc"}, Steps: [][]string{{"rustc", "--edition", "2024", "--test", "-o", "main_test.exe", ArgTest}, {"./main_test.exe", "--test-threads=1"}}, Version: []string{"rustc", "--version"}, Test: true},
 	"java":   {ID: "java", Main: "MainTest.java", Tools: []string{"javac", "java"}, Steps: javaTestSteps(imageJUnit, ":"), Version: []string{"javac", "-version"}, Test: true},
 	"csharp": {ID: "csharp", Main: "MainTests.cs", Tools: []string{"dotnet"}, Version: []string{"dotnet", "--version"}, Test: true},
 	"cpp":    {ID: "cpp", Main: "main_test.cpp", Tools: []string{"c++"}, Version: []string{"c++", "--version"}, Test: true},
