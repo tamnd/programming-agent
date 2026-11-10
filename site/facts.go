@@ -278,6 +278,9 @@ func (b *builder) nameLinks(slugs []string) []Link {
 // particles stay in lower case inside a name, as in "Guido van Rossum".
 var particles = map[string]bool{"van": true, "von": true, "de": true, "der": true, "den": true, "da": true, "di": true, "du": true, "del": true, "la": true, "le": true, "bin": true, "ibn": true}
 
+// acronyms are the words that a name writes in capitals, as in "Standard ML" and "ABC". A language that has a node or a card gets its name from there, so this list is only for the names that have neither.
+var acronyms = map[string]bool{"abc": true, "ml": true, "sml": true, "apl": true, "awk": true, "clu": true, "sql": true, "cpl": true, "bcpl": true, "pl": true, "jvm": true, "clr": true, "gcc": true, "llvm": true}
+
 // titleWords makes a name from a slug: "guido-van-rossum" gives "Guido van Rossum", and "modula-3" gives "Modula-3".
 func titleWords(slug string) string {
 	parts := strings.Split(slug, "-")
@@ -295,6 +298,10 @@ func titleWords(slug string) string {
 		}
 		if i > 0 && particles[w] {
 			b.WriteString(w)
+			continue
+		}
+		if acronyms[w] {
+			b.WriteString(strings.ToUpper(w))
 			continue
 		}
 		b.WriteString(strings.ToUpper(w[:1]) + w[1:])
