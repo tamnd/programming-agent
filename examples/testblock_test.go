@@ -273,7 +273,7 @@ func TestAdjustTest(t *testing.T) {
 		t.Errorf("test step: %s", got)
 	}
 	b = block(`rust test flags="--edition 2021"`)
-	if got := strings.Join(adjust(lang.TestPrograms["rust"], b).Steps[0], " "); got != "rustc --edition 2021 --test -o main_test {test}" {
+	if got := strings.Join(adjust(lang.TestPrograms["rust"], b).Steps[0], " "); got != "rustc --edition 2021 --test -o main_test.exe {test}" {
 		t.Errorf("rust: %s", got)
 	}
 	if got := strings.Join(lang.TestPrograms["go"].Steps[1], " "); got != "go test -v -count=1 ." {
@@ -334,7 +334,7 @@ func TestRunTestLocal(t *testing.T) {
 				t.Skip("no " + lang.TestPrograms[l].Tools[0])
 			}
 			ok, bad := testCode[l][0], testCode[l][1]
-			fence := func(info, code string) string { return "```" + l + " " + info + "\n" + code + "```\n\n" }
+			fence := func(info, code string) string { return "```" + l + " " + info + " timeout=30\n" + code + "```\n\n" }
 			src := fence("test id=pass", ok) + fence("test id=fail match=any", bad) + fence("test fails expect=test-failure id=fails", bad) + fence("test fails expect=test-failure id=nofail", ok)
 			cases, _ := Collect("p.md", src, 1)
 			x := &Runner{R: &lang.Runner{TempDir: t.TempDir()}}
