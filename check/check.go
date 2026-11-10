@@ -91,6 +91,7 @@ var Rules = map[string]string{
 	"K03": "the field since of the front matter agrees with the compat entry",
 	"K04": "no version claim in prose; a version belongs in a compat entry",
 	"K05": "each probe that has a release before version_added has a failure signature",
+	"X05": "each expect=error:<code> names a diagnostic card or node of the language of the block",
 	"X06": "no node slug is a reserved word, a language id or an area id",
 }
 
@@ -160,6 +161,7 @@ func Run(c *node.Corpus, opt Options) []Finding {
 		r.pseudo(n)
 		r.impls(n)
 		r.links(n)
+		r.diagnostics(n)
 		r.contracts(n)
 		r.compat(n)
 		r.leanNode(n)

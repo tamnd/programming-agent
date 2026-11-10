@@ -264,13 +264,46 @@ func (r *codeRenderer) render(w util.BufWriter, src []byte, n ast.Node, entering
 	default:
 		switch {
 		case hasWord(info, "fails"):
-			_, _ = w.WriteString("<p class=\"code-note fails\">This code fails on purpose. The output below is the error.</p>\n")
+			_, _ = w.WriteString("<p class=\"code-note fails\">" + failsNote(lang, info) + "</p>\n")
 		case hasWord(info, "wrong"):
 			_, _ = w.WriteString("<p class=\"code-note wrong\">This code runs but gives a wrong answer on purpose.</p>\n")
 		}
 		_, _ = w.WriteString(Highlight(code.String(), lang))
 	}
 	return ast.WalkSkipChildren, nil
+}
+
+// failsNote is the label of a fails block (spec 16): what the failure is, from the attribute expect, with the diagnostic linked (rule X05).
+func failsNote(lang, info string) string {
+	var expect string
+	for _, f := range strings.Fields(info) {
+		if v, ok := strings.CutPrefix(f, "expect="); ok {
+			expect = v
+		}
+	}
+	kind, detail, _ := strings.Cut(expect, ":")
+	detail = html.EscapeString(detail)
+	switch kind {
+	case "compile":
+		return "This code does not compile, on purpose."
+	case "error":
+		if detail == "" {
+			return "This code does not compile, on purpose."
+		}
+		return fmt.Sprintf("This code does not compile, on purpose. The error is <a href=\"/%s/errors/%s/\"><code>%s</code></a>.", html.EscapeString(lang), detail, detail)
+	case "exception":
+		if detail == "" {
+			return "This code raises an exception, on purpose."
+		}
+		return fmt.Sprintf("This code raises <code>%s</code>, on purpose.", detail)
+	case "panic":
+		return "This code panics, on purpose."
+	case "sanitizer":
+		return "This code has a memory error, on purpose, and the sanitizer reports it."
+	case "timeout":
+		return "This code does not stop, on purpose."
+	}
+	return "This code fails on purpose. The output below is the error."
 }
 
 // hasWord tells if the info string of a fenced block has a word, such as run or stream=stderr (spec 07.2).

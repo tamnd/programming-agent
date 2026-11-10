@@ -140,3 +140,20 @@ func mustRender(t *testing.T, src string) Result {
 	}
 	return res
 }
+
+func TestFailsNote(t *testing.T) {
+	src := "```rust fails expect=error:E0502 id=a\nfn main() {}\n```\n\n```python fails expect=exception:KeyError id=b\nx = {}\n```\n\n```java fails expect=compile id=c\nclass A {}\n```\n"
+	r, err := Render(src, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`The error is <a href="/rust/errors/E0502/"><code>E0502</code></a>.`,
+		"This code raises <code>KeyError</code>, on purpose.",
+		"This code does not compile, on purpose.",
+	} {
+		if !strings.Contains(r.HTML, want) {
+			t.Errorf("no %q in:\n%s", want, r.HTML)
+		}
+	}
+}
