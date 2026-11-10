@@ -41,7 +41,7 @@ func TestDepsDockerfile(t *testing.T) {
 	const base = "prog-base-x:1"
 	for lang, want := range map[string][]string{
 		"rust": {"FROM " + base + "\n", "COPY Cargo.toml Cargo.lock /opt/prog/deps/", "CARGO_NET_OFFLINE=false cargo vendor --locked --versioned-dirs /opt/prog/vendor > .cargo/config.toml", "cargo build --offline --locked", "chmod -R a+rX /opt/prog", "USER 1000:1000"},
-		"java": {"FROM " + base + " AS fetch\n", "ADD --checksum=sha256:" + mavenSHA256 + " https://repo1.maven.org/", "apache-maven-" + mavenVersion + "-bin.tar.gz", "COPY pom.xml /opt/prog/deps/pom.xml", mavenCopyDependencies + " -DincludeScope=runtime -DoutputDirectory=/opt/prog/lib", "\nFROM " + base + "\nCOPY --from=fetch /opt/prog/lib /opt/prog/lib"},
+		"java": {"FROM " + base + " AS fetch\n", "ADD --checksum=sha256:" + mavenSHA256 + " https://repo1.maven.org/", "apache-maven-" + mavenVersion + "-bin.tar.gz", "COPY pom.xml /opt/prog/deps/pom.xml", mavenCopyDependencies + " -DincludeScope=test " + mavenExclude + " -DoutputDirectory=/opt/prog/lib", "\nFROM " + base + "\nCOPY --from=fetch /opt/prog/lib /opt/prog/lib"},
 		"cpp":  {"FROM " + base + "\n", "COPY vcpkg*.json /opt/prog/deps/", "command -v vcpkg", `echo "prog: the C++ image has no vcpkg`, "vcpkg install --x-manifest-root=/opt/prog/deps --x-install-root=/opt/prog/vcpkg", "ln -s \"$triplet/include\" /opt/prog/include", "USER 1000:1000"},
 	} {
 		df := DepsDockerfile(DepsSupport[lang], base)
@@ -64,21 +64,31 @@ func TestDepsFor(t *testing.T) {
 	for _, tc := range []struct {
 		lang    string
 		sandbox bool
+		test    bool
 		skip    bool
 	}{
-		{"python", true, true},
-		{"python", false, true},
-		{"kotlin", true, true},
-		{"cpp", false, true},
-		{"cpp", true, false},
-		{"rust", false, false},
-		{"rust", true, false},
-		{"java", false, false},
+		{"python", true, false, true},
+		{"python", false, false, true},
+		{"python", true, true, true},
+		{"kotlin", true, false, true},
+		{"cpp", false, false, true},
+		{"cpp", true, false, false},
+		{"cpp", true, true, false},
+		{"cpp", false, true, true},
+		{"rust", false, false, false},
+		{"rust", true, false, false},
+		{"rust", false, true, false},
+		{"java", false, false, false},
+		{"java", false, true, false},
+		{"csharp", false, true, false},
+		{"csharp", true, true, false},
+		// C# runs only the test blocks with deps=.
+		{"csharp", true, false, true},
 	} {
-		_, err := DepsFor(tc.lang, tc.sandbox)
+		_, err := DepsFor(tc.lang, tc.sandbox, tc.test)
 		var ds DepsSkip
 		if got := errors.As(err, &ds); got != tc.skip {
-			t.Errorf("DepsFor(%s, %v) = %v", tc.lang, tc.sandbox, err)
+			t.Errorf("DepsFor(%s, %v, %v) = %v", tc.lang, tc.sandbox, tc.test, err)
 		}
 	}
 }

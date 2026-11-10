@@ -96,16 +96,16 @@ func TestCompare(t *testing.T) {
 		return b
 	}
 	got := lang.RunResult{Stdout: "b\na\n", Stderr: "warning 12\n"}
-	if why := compare(out("output", "b\na\n"), got); why != "" {
+	if why := compare(out("output", "b\na\n"), got, nil); why != "" {
 		t.Error(why)
 	}
-	if why := compare(out("output", "a\nb\n"), got); why == "" {
+	if why := compare(out("output", "a\nb\n"), got, nil); why == "" {
 		t.Error("exact match must see the order")
 	}
-	if why := compare(out("output match=unordered", "a\nb\n"), got); why != "" {
+	if why := compare(out("output match=unordered", "a\nb\n"), got, nil); why != "" {
 		t.Error(why)
 	}
-	if why := compare(out("output stream=stderr match=regex", `warning \d+`+"\n"), got); why != "" {
+	if why := compare(out("output stream=stderr match=regex", `warning \d+`+"\n"), got, nil); why != "" {
 		t.Error(why)
 	}
 }
