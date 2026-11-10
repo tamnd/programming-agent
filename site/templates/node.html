@@ -95,7 +95,7 @@
 <p><a href="{{.URL}}">See the Lean source and each declaration</a></p>
 </section>{{end}}{{end}}
 
-{{define "refs-list"}}<ol class="refs">{{range .Sources}}<li>{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}{{with .Locator}}, {{.}}{{end}}{{with .Note}}. {{.}}{{end}}</li>{{end}}</ol>
+{{define "refs-list"}}<ol class="refs">{{range $i, $s := .Sources}}<li id="ref-{{inc $i}}">{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else}}{{.Text}}{{end}}{{with .Locator}}, {{.}}{{end}}{{with .Note}}. {{.}}{{end}}</li>{{end}}</ol>
 {{end}}
 
 {{define "refs-section"}}<h2 id="references">References</h2>
