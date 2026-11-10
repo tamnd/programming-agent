@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- The same packages as the test project that algo writes (lang/run.go). Change both together. -->
+  <!-- The same packages as the test project that prog writes (lang/run.go). Change both together. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
