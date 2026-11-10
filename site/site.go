@@ -200,7 +200,7 @@ func build(c *node.Corpus, opt Options) (*Report, error) {
 		b.status[n.Slug] = status.Of(n, status.Env{Corpus: c, Results: b.results, VizChecked: b.vizChecked(), Decls: b.decls})
 	}
 	b.cardIndex()
-	steps := []func() error{b.nodes, b.home, b.areas, b.cardPages, b.tasks, b.kinds, b.gallery, b.languages, b.matrix, b.pages, b.spec, b.machine}
+	steps := []func() error{b.nodes, b.home, b.areas, b.cardPages, b.tasks, b.kinds, b.gallery, b.languages, b.matrix, b.compatData, b.pages, b.spec, b.machine}
 	for _, f := range steps {
 		if err := f(); err != nil {
 			return nil, err
@@ -269,10 +269,11 @@ var funcs = template.FuncMap{
 		bs, err := json.Marshal(v)
 		return template.JS(bs), err
 	},
-	"plural": plural,
-	"comma":  comma,
-	"inc":    func(i int) int { return i + 1 },
-	"join":   strings.Join,
+	"compatSummary": compatSummary,
+	"plural":        plural,
+	"comma":         comma,
+	"inc":           func(i int) int { return i + 1 },
+	"join":          strings.Join,
 	"title": func(s string) string {
 		if s == "" {
 			return s

@@ -473,3 +473,14 @@ mark { background: color-mix(in srgb, var(--st-compare) 35%, transparent); color
 .decls .doc { color: var(--muted); font-size: 0.88rem; }
 table.glance { margin: 0 0 1rem; }
 table.glance th { text-align: left; font-weight: 600; white-space: nowrap; padding-right: 1.2rem; vertical-align: top; }
+/* The compat table */
+table.compat { font-size: 0.9rem; }
+table.compat th[scope="row"] { text-align: left; font-weight: 400; }
+table.compat td { white-space: nowrap; }
+.c-yes { color: var(--ok); }
+.c-no { color: var(--muted); }
+.c-preview, .c-partial { color: var(--accent); }
+.compat .verified { font-size: 0.75rem; border: 1px solid currentColor; padding: 0 0.25rem; }
+.compat .detail { color: var(--muted); font-size: 0.8rem; }
+.compat-notes { font-size: 0.85rem; color: var(--muted); }
+.compat-summary { font-size: 0.85rem; color: var(--muted); }

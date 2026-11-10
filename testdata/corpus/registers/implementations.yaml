@@ -1,0 +1,10 @@
+# The implementations of the test corpus.
+python:
+  - id: cpython
+    name: CPython
+    main: true
+    image: "python:{v}-slim"
+    run: [python, "{file}"]
+    releases: ["2.7", "3.0", "3.1"]
+  - id: pypy
+    name: PyPy

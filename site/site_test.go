@@ -101,7 +101,7 @@ func TestKindPages(t *testing.T) {
 		// A concept shows its example files as tabs, and the features that realize it.
 		"closures/index.html": {`class="code examples"`, `id="code-python"`, `id="code-go"`, `data-lang="python"`, `<figcaption>Output</figcaption>`, `href="/python/closures-and-nonlocal/"`},
 		// A feature names its language and its first version.
-		"python/closures-and-nonlocal/index.html": {`<dt>Language</dt>`, `<dd><a href="/python/">Python</a></dd>`, `<dt>Since</dt><dd>3.0</dd>`},
+		"python/closures-and-nonlocal/index.html": {`<dt>Language</dt>`, `<dd><a href="/python/">Python</a></dd>`, `<dt>Since</dt><dd>3.0</dd>`, `<table class="compat">`, `<tr id="compat-closures-and-nonlocal">`, `<th scope="col">CPython</th><th scope="col">PyPy</th>`, `<div class="c-yes">3.0</div>`, `<li id="compat-note-1">The test corpus has no data for PyPy.</li>`, `<p class="compat-summary">`},
 		// A language page has the facts of the language and the parts of its guide.
 		// The table of the section "The language at a glance" comes from the front matter.
 		"python/index.html": {`<table class="glance">`, `<th scope="row">Typing</th><td>dynamic, strong, checked at run time and by optional static checkers</td>`, `<dt>Appeared</dt><dd>1991</dd>`, `<code>.py .pyi</code>`, `href="/python/functions/"`, `href="/python/3.14/"`},
@@ -141,6 +141,7 @@ func TestCardPages(t *testing.T) {
 		"python/api/str/index.html":      {`id="str.split"`, "str.split(sep=None, maxsplit=-1)"},
 		"javascript/api/JSON/index.html": {`id="JSON.parse"`},
 		"python/index.html":              {`href="/python/api/"`, `href="/python/proposals/"`},
+		"data/compat/python.json":        {`"closures-and-nonlocal"`, `"version_added": "3.0"`, `"licence": "CC0-1.0"`},
 		"api/moved.json":                 {`"/rust/errors/E0382":"/rust/errors/#E0382"`, `"/t/9STRSP":"/python/api/str/#str.split"`},
 		"python/api/str.split.json":      {`"url":"https://programming.tamnd.com/python/api/str/#str.split"`},
 	}

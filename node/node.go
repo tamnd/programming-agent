@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/tamnd/programming-agent/compat"
 )
 
 // Levels are the editorial levels of spec 05.5.
@@ -302,9 +304,13 @@ type Node struct {
 	RawFront  []byte    `json:"-"`
 	Forbidden []string  `json:"-"` // front matter keys that rule T05 rejects
 	Impls     []Impl    `json:"impls,omitempty"`
-	Proofs    []Proof   `json:"proofs,omitempty"`
-	Scene     string    `json:"scene,omitempty"` // path of viz/scene.ts, relative to the root
-	Presets   []Preset  `json:"presets,omitempty"`
+	// CompatEntries are the entries of the compat file of the node (spec 09.2), and CompatErr is the error when the file could not be read. Probes holds probes/probes.yaml.
+	CompatEntries []compat.Entry           `yaml:"-" json:"-"`
+	CompatErr     error                    `yaml:"-" json:"-"`
+	Probes        map[string]compat.Expect `yaml:"-" json:"-"`
+	Proofs        []Proof                  `json:"proofs,omitempty"`
+	Scene         string                   `json:"scene,omitempty"` // path of viz/scene.ts, relative to the root
+	Presets       []Preset                 `json:"presets,omitempty"`
 }
 
 // Lang returns the implementation in a language, or nil.
@@ -402,6 +408,7 @@ func Read(root, dir string) (*Node, error) {
 	if err := readImpls(root, n); err != nil {
 		return nil, err
 	}
+	readCompat(root, n)
 	if err := readProofs(root, n); err != nil {
 		return nil, err
 	}
@@ -409,6 +416,25 @@ func Read(root, dir string) (*Node, error) {
 		return nil, err
 	}
 	return n, nil
+}
+
+// readCompat reads the compat file that the field compat names, or compat.yaml when the field is empty and the file exists. An error goes to CompatErr, so that rule K01 can report it.
+func readCompat(root string, n *Node) {
+	dir := filepath.Join(root, filepath.FromSlash(n.Rel))
+	name := n.Compat
+	if name == "" {
+		if _, err := os.Stat(filepath.Join(dir, "compat.yaml")); err != nil {
+			return
+		}
+		name = "compat.yaml"
+	}
+	n.CompatEntries, n.CompatErr = compat.Read(filepath.Join(dir, filepath.FromSlash(name)))
+	if n.CompatErr == nil {
+		n.Probes, n.CompatErr = compat.ReadExpect(dir)
+	}
+	if n.CompatErr != nil {
+		n.CompatErr = errors.New(strings.ReplaceAll(n.CompatErr.Error(), root+string(filepath.Separator), ""))
+	}
 }
 
 // readExamples reads examples/<lang>.md. A file may start with a front matter block; the body is the part after it.
