@@ -38,7 +38,7 @@ A fenced code block's info string is the language name and then attributes. The 
 | `stdin=<id>` | feed the named `input` block to stdin | empty |
 | `args="..."` | command-line arguments | none |
 | `deps=<lock>` | the example uses packages pinned in a lock file of the node (7.7) | none |
-| `timeout=<s>` | wall-time limit in seconds, up to 30 | 10 |
+| `timeout=<s>` | wall-time limit of the run step in seconds, up to 30. A build step, such as `go build` or `javac`, has its own limit of 2 minutes. | 10 |
 | `browser` | the reader may run it in the playground (7.10); the build checks that the browser runtime gives the same output | on when the language has a browser runtime and the block has no `deps`, `file` or OS use |
 | `lint="rule,rule"` | lint rules turned off for this block, each with a reason in the node's notes | none |
 | `platform=<os>` | `linux` (default), `windows`, `macos`; non-Linux blocks run in the scheduled jobs of 7.5 | `linux` |

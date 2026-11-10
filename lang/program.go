@@ -92,6 +92,9 @@ type RunResult struct {
 	Ms       int64
 }
 
+// BuildTimeout is the longest time of one build step of a program, such as javac or cargo build. The timeout of a block applies to the last step only, which runs the program.
+var BuildTimeout = 2 * time.Minute
+
 // RunProgram writes the files to a new directory and runs the steps of the language. files maps a file name to its content; the block itself is under the Main name of the language. The output has the paths of the directory removed.
 func (r *Runner) RunProgram(p Program, files map[string]string, stdin string, args []string, timeout time.Duration) (RunResult, error) {
 	res := RunResult{Phase: "run"}
@@ -123,10 +126,14 @@ func (r *Runner) RunProgram(p Program, files map[string]string, stdin string, ar
 		}
 	}
 	start := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
 	for i, step := range p.Steps {
 		last := i == len(p.Steps)-1
+		// The block timeout limits the run of the program. A build step has its own longer limit, because a compiler on a cold cache can take more than the time of the whole run (spec 07.2).
+		limit := BuildTimeout
+		if last {
+			limit = timeout
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), limit)
 		c := step
 		if last {
 			c = append(append([]string(nil), step...), args...)
@@ -148,9 +155,11 @@ func (r *Runner) RunProgram(p Program, files map[string]string, stdin string, ar
 			cmd.Stdin = strings.NewReader(stdin)
 		}
 		err := cmd.Run()
+		timedOut := errors.Is(ctx.Err(), context.DeadlineExceeded)
+		cancel()
 		res.Stdout, res.Stderr = clean(out.String(), dir), clean(errb.String(), dir)
 		if err != nil {
-			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			if timedOut {
 				res.TimedOut = true
 			}
 			var ee *exec.ExitError
