@@ -14,6 +14,7 @@ import (
 
 	"github.com/tamnd/programming-agent/examples"
 	"github.com/tamnd/programming-agent/lang"
+	"github.com/tamnd/programming-agent/node"
 )
 
 // cmdRun runs the code blocks of the pages and checks their output (spec 07). With -update, it writes the output of each run into the output blocks.
@@ -80,15 +81,6 @@ func cmdRun(args []string) error {
 			return err
 		}
 	}
-	diag := map[string]bool{}
-	for _, n := range c.Nodes {
-		// A diagnostic card has the code in code:, and its local slug is the code too, such as rust/errors/E0382.
-		if n.Kind == "diagnostic" {
-			diag[n.Code] = true
-			diag[n.Local] = true
-		}
-	}
-
 	// Read the files: node.md and examples/*.md of each node.
 	type page struct {
 		path, src string
@@ -116,8 +108,11 @@ func cmdRun(args []string) error {
 				if len(want) > 0 && !want[k.Block.Lang] {
 					continue
 				}
-				if code, ok := strings.CutPrefix(k.Block.Attrs["expect"], "error:"); ok && !diag[code] {
-					warnings = append(warnings, fmt.Sprintf("%s:%d: X05 no diagnostic card has the code %s", rel, k.Block.Line, code))
+				if code, ok := strings.CutPrefix(k.Block.Attrs["expect"], "error:"); ok {
+					// A diagnostic is a card or a node, with the slug <lang>/errors/<code> (rule X05).
+					if slug := node.FullSlug("diagnostic", k.Block.Lang, code); c.BySlug[slug] == nil && c.CardBySlug[slug] == nil {
+						warnings = append(warnings, fmt.Sprintf("%s:%d: X05 no diagnostic card or node has the slug %s", rel, k.Block.Line, slug))
+					}
 				}
 				pg.cases = append(pg.cases, k)
 			}
