@@ -171,6 +171,10 @@ func TestTitleWords(t *testing.T) {
 		"modula-3":         "Modula-3",
 		"brendan-eich":     "Brendan Eich",
 		"icon":             "Icon",
+		"standard-ml":      "Standard ML",
+		"ml-kit":           "ML Kit",
+		"abc":              "ABC",
+		"pl-1":             "PL-1",
 	} {
 		if got := titleWords(in); got != want {
 			t.Errorf("titleWords(%q) = %q, want %q", in, got, want)
