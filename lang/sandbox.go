@@ -39,6 +39,7 @@ type Sandbox struct {
 	names   []string
 	pulled  map[string]error
 	version map[string]string
+	derived map[string]*derivedImage
 }
 
 // digestRef matches an image reference that is pinned by digest, or a local image ID. An image ID is a digest too, and the image workflow tests an image by its ID before it pushes it.
@@ -102,6 +103,11 @@ type Mount struct {
 
 // Argv returns the command that runs cmd in a new container for the language. The first mount is the work directory. A mount keeps its host path in the container, so that the paths in an error message are the same as in host mode and Tree.Rewrite works on them. HOME points into the work directory, so that the caches of one implementation stay between its commands and go away with the tree.
 func (s *Sandbox) Argv(lang string, interactive bool, mounts []Mount, cmd []string) []string {
+	return s.ArgvImage(s.Images[lang], interactive, mounts, cmd)
+}
+
+// ArgvImage is Argv with an image that is not in the manifest, such as the image with the packages of a lock file (spec 07.7). The container has the same limits and no network.
+func (s *Sandbox) ArgvImage(image string, interactive bool, mounts []Mount, cmd []string) []string {
 	name := "algo-" + randomHex(6)
 	s.mu.Lock()
 	s.names = append(s.names, name)
@@ -136,7 +142,7 @@ func (s *Sandbox) Argv(lang string, interactive bool, mounts []Mount, cmd []stri
 	for _, e := range env {
 		a = append(a, "-e", e)
 	}
-	return append(append(a, s.Images[lang]), cmd...)
+	return append(append(a, image), cmd...)
 }
 
 // Version returns the first line of the version output of the toolchain in the image.

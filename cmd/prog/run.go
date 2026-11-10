@@ -116,6 +116,7 @@ func cmdRun(args []string) error {
 				if len(want) > 0 && !want[k.Block.Lang] {
 					continue
 				}
+				k.Dir = n.Dir
 				if code, ok := strings.CutPrefix(k.Block.Attrs["expect"], "error:"); ok && !diag[code] {
 					warnings = append(warnings, fmt.Sprintf("%s:%d: X05 no diagnostic card has the code %s", rel, k.Block.Line, code))
 				}

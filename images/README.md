@@ -15,6 +15,8 @@
 
 Each base image and each download is pinned by digest. The workflow `images.yml` builds the images, runs the sandbox tests on them, and pushes them to `ghcr.io/tamnd` with build provenance. The content repository pins each image by digest in `manifests/images.yaml`.
 
+`prog run` builds more images on top of these for the blocks with `deps=` (spec 07.7). Each one is tagged `prog-deps-<lang>:<hash>` and has the label `prog.deps=1`. The Dockerfile text of each language is in `lang/deps.go`. The Rust image gets the crates of `Cargo.lock` with `cargo vendor` and compiles them once. The JVM image gets the jars of `pom.xml` with Maven, pinned by checksum, into `/opt/prog/lib`. The gcc image has no vcpkg, so a C++ block with `vcpkg.json` fails with a message that says so. To remove these images, run `docker image prune -a --filter label=prog.deps=1`.
+
 The images are for `linux/amd64`. On another machine, give `prog test -unsafe-local` to run the tests with the tools of the machine.
 
 The images expect these paths:
