@@ -63,6 +63,8 @@ var Rules = map[string]string{
 	"G07": "no edge points to its own node; see_also has at most 8 targets",
 	"E01": "each complexity string parses",
 	"E04": "each variable of a claim is defined in vars, and the model exists",
+	"E11": "a core concept has a matrix cell for each tier-1 language: an example file, a feature that realizes it, or a written cell",
+	"E12": "each written matrix cell has a known status and a known key, and a cell with no example gives its reason",
 	"W01": "the section headings of the kind are in order",
 	"W03": "pseudocode line ids are unique, and each @line marker names an existing id",
 	"I10": "each implementation and test file starts with the SPDX header",
@@ -162,6 +164,7 @@ func Run(c *node.Corpus, opt Options) []Finding {
 		r.links(n)
 		r.contracts(n)
 		r.compat(n)
+		r.matrix(n)
 		r.leanNode(n)
 	}
 	r.leanDecls()

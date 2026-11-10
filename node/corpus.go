@@ -103,6 +103,8 @@ type Corpus struct {
 	// Impls is registers/implementations.yaml: the compat columns of each language (spec 09.2). Probes are the results of prog compat probe, from manifests/probes.jsonl.
 	Impls  compat.Register
 	Probes compat.Results
+	// realizers maps a concept slug to the features that realize it.
+	realizers map[string][]*Node
 }
 
 // Load reads the whole content tree at root.
@@ -203,6 +205,14 @@ func Load(root string) (*Corpus, error) {
 	for _, k := range c.Cards {
 		if _, dup := c.CardBySlug[k.Slug()]; !dup {
 			c.CardBySlug[k.Slug()] = k
+		}
+	}
+	c.realizers = map[string][]*Node{}
+	for _, n := range c.Nodes {
+		if n.Kind == "feature" {
+			for _, r := range n.Realizes {
+				c.realizers[r] = append(c.realizers[r], n)
+			}
 		}
 	}
 	return c, nil

@@ -445,6 +445,8 @@ type MatrixCell struct {
 	Title string
 	URL   string
 	Has   bool
+	// Verdict is the status of a cell that has no code, such as absent or library (spec 04.8).
+	Verdict string
 }
 
 func (b *builder) matrix() error {
@@ -479,6 +481,11 @@ func (b *builder) matrix() error {
 				c = MatrixCell{Has: true, Level: r.Level, Label: r.Label, Title: l.Name + ": " + r.Name, URL: "/" + n.Slug + "/#code-" + l.ID}
 			} else if n.Example(l.ID) != nil {
 				c = MatrixCell{Has: true, Level: 1, Label: "ex", Title: l.Name + ": example", URL: "/" + n.Slug + "/#code-" + l.ID}
+			} else if v, ok := b.c.Cell(n, l.ID); ok {
+				c = MatrixCell{Verdict: v.Status, Label: verdictShort[v.Status], Title: l.Name + ": " + strings.ToLower(verdictWord(v.Status))}
+				if v.Feature != "" {
+					c.URL = "/" + v.Feature + "/"
+				}
 			}
 			row.Cells = append(row.Cells, c)
 		}

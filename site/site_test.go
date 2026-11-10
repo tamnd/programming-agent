@@ -99,7 +99,9 @@ func TestKindPages(t *testing.T) {
 	}
 	checks := map[string][]string{
 		// A concept shows its example files as tabs, and the features that realize it.
-		"closures/index.html": {`class="code examples"`, `id="code-python"`, `id="code-go"`, `data-lang="python"`, `<figcaption>Output</figcaption>`, `href="/python/closures-and-nonlocal/"`},
+		"closures/index.html": {`class="code examples"`, `id="code-python"`, `id="code-go"`, `data-lang="python"`, `<figcaption>Output</figcaption>`, `href="/python/closures-and-nonlocal/"`,
+			// The verdict table starts the section "In languages" (spec 04.8).
+			`<table class="verdicts">`, `<a href="#code-go">Native</a>`, `<tr data-lang="rust"><th scope="row">Rust</th><td><span class="verdict v-open">Open</span></td><td>Not decided yet.</td></tr>`},
 		// A feature names its language and its first version.
 		"python/closures-and-nonlocal/index.html": {`<dt>Language</dt>`, `<dd><a href="/python/">Python</a></dd>`, `<dt>Since</dt><dd>3.0</dd>`, `<table class="compat">`, `<tr id="compat-closures-and-nonlocal">`, `<th scope="col">CPython</th><th scope="col">PyPy</th>`, `<div class="c-yes">3.0</div>`, `<li id="compat-note-1">The test corpus has no data for PyPy.</li>`, `<p class="compat-summary">`},
 		// A language page has the facts of the language and the parts of its guide.

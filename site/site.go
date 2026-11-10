@@ -273,6 +273,7 @@ var funcs = template.FuncMap{
 	"plural":        plural,
 	"comma":         comma,
 	"inc":           func(i int) int { return i + 1 },
+	"verdict":       verdictWord,
 	"join":          strings.Join,
 	"title": func(s string) string {
 		if s == "" {
