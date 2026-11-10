@@ -5,5 +5,14 @@
 {{with .Tiles}}{{template "tiles" .}}{{end}}
 {{with .Body}}<div class="prose">{{.}}</div>{{end}}
 {{template "groups" .Groups}}
+{{with .Cards}}<section class="cards">{{range .}}<article class="card" id="{{.Anchor}}">
+<h2 class="card-head"><a class="card-anchor" href="#{{.Anchor}}">{{.Heading}}</a>{{if ne .Heading .Local}} <code>{{.Local}}</code>{{end}}</h2>
+{{with .Code}}<pre class="card-sig"><code>{{.}}</code></pre>{{end}}
+{{with .Summary}}<p>{{.}}</p>{{end}}
+{{with .Facts}}<dl class="card-facts">{{range .}}<div><dt>{{.Key}}</dt><dd>{{if .Code}}<code>{{.Value}}</code>{{else}}{{.Value}}{{end}}</dd></div>{{end}}</dl>{{end}}
+{{with .Links}}<p class="card-links">See {{range $i, $l := .}}{{if $i}}, {{end}}{{template "link" $l}}{{end}}.</p>{{end}}
+<p class="card-foot">{{with .Sources}}Source: {{range $i, $l := .}}{{if $i}}, {{end}}<a href="{{$l.URL}}" rel="external">{{$l.Name}}</a>{{end}}. {{end}}<a href="{{.Record}}">JSON record</a>. This entry is a card. <a href="{{.Help}}">Help write this page</a>.</p>
+</article>{{end}}</section>{{end}}
+{{with .Pager}}<nav class="pager" aria-label="Pages">{{range .}}{{if eq .Note "current"}}<span aria-current="page">{{.Name}}</span>{{else}}<a href="{{.URL}}">{{.Name}}</a>{{end}}{{end}}</nav>{{end}}
 {{with .Empty}}<p class="empty-note">{{.}} <a href="/contribute/">Read how to contribute</a>.</p>{{end}}
 </div>{{end}}

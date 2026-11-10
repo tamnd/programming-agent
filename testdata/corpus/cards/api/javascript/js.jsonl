@@ -1,0 +1,1 @@
+{"tag":"9JSNPR","kind":"api","owner":"javascript","path":"JSON.parse","entity":"static method","signature":"JSON.parse(text, reviver)","summary":"Parses a JSON text and returns the value that it describes.","doc":{"url":"https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse"}}

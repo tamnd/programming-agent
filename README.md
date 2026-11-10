@@ -27,6 +27,7 @@ Run these commands in a clone of tamnd/programming.
 | Command | What it does |
 | --- | --- |
 | `prog new concept closures -area functions-and-abstraction/closures-and-scope` | Makes a node directory with the sections of its kind. |
+| `prog promote rust/errors/E0382` | Makes a node from a card. The node keeps the tag and the facts, and the row leaves its register. |
 | `prog fmt` | Puts node.md, the registers and the topics in canonical form. Add `-check` to only report. |
 | `prog mint` | Gives each provisional id `NEW-<slug>` a permanent tag. Add `-dry-run` to see the tags first. |
 | `prog mv <slug> <new-slug>` | Renames or moves a node. The old URL redirects. The tag does not change. |
@@ -45,7 +46,7 @@ The exit codes are: 0 for success, 1 when a check finds a problem, 2 for a usage
 | Directory | Contents |
 | --- | --- |
 | `cmd/prog` | The command. |
-| `node` | Reads the content tree. |
+| `node` | Reads the content tree and the card registers. |
 | `check` | The audit rules of spec 15. |
 | `status` | The ladders of a node (spec 04.9). |
 | `lang` | Build trees and native tests for each language. |

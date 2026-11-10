@@ -99,6 +99,9 @@ type ListPage struct {
 	Groups  []Group
 	Empty   string
 	Body    template.HTML
+	// Cards are the cards of a collection page, and Pager links the pages of a long collection.
+	Cards []CardView
+	Pager []Link
 }
 
 // HomePage is the data of the home page.
@@ -269,7 +272,15 @@ func (b *builder) areaPage(a node.Area, crumbs []Link, hue int) error {
 		p.Tiles = append(p.Tiles, Tile{Name: s.Name, URL: s.URL(), Summary: s.Summary, Hue: p.Hue, Count: n, Unit: "page", Missing: n == 0})
 	}
 	p.Groups = b.byKind(b.c.InArea(path))
-	if len(p.Groups) == 0 {
+	if ks := b.cardsAt[url]; len(ks) > 0 {
+		// A sub-area of a language guide, such as /rust/errors/, is also the collection of the cards of its owner.
+		// The area page is the first page of the collection, and cardPages writes the others.
+		pages := (len(ks) + cardsPerPage - 1) / cardsPerPage
+		p.Cards = b.cardViews(ks[:min(len(ks), cardsPerPage)])
+		p.Pager = pager(url, 0, pages)
+		b.cardDone[url] = true
+	}
+	if len(p.Groups) == 0 && len(p.Cards) == 0 {
 		p.Empty = "This area has no pages yet. The coverage plan lists the pages that it needs. You can write one of them."
 	}
 	return b.page("list", url, p)

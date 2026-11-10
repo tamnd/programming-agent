@@ -1,0 +1,359 @@
+// SPDX-License-Identifier: Apache-2.0
+
+package site
+
+import (
+	"encoding/json"
+	"fmt"
+	"sort"
+	"strings"
+
+	"github.com/tamnd/programming-agent/node"
+)
+
+// cardsPerPage is the most cards that one collection page shows (spec 16.7).
+const cardsPerPage = 200
+
+// CardView is one card on a collection page.
+type CardView struct {
+	Anchor  string
+	Heading string
+	Local   string
+	Summary string
+	Kind    string
+	Code    string // the signature of an api entry, shown as code
+	Facts   []Fact
+	Links   []Link
+	Sources []Link
+	Record  string // the URL of the JSON record
+	Help    string // the URL of the page that tells how to write the full page
+}
+
+// collectionNames are the headings of the card collections of an owner.
+var collectionNames = map[string]string{
+	"errors":    "Errors and diagnostics",
+	"lints":     "Lints",
+	"proposals": "Proposals",
+	"api":       "Standard library reference",
+}
+
+// cardIndex groups the cards by the URL of their collection, and gives each card the URL of the page and the anchor that shows it. A collection with more than cardsPerPage cards has more pages: /<collection>/page/2/ and on.
+func (b *builder) cardIndex() {
+	b.cardsAt = map[string][]*node.Card{}
+	b.cardHref = map[string]string{}
+	b.cardDone = map[string]bool{}
+	for _, k := range b.c.Cards {
+		if k.Local() == "" || b.c.BySlug[k.Slug()] != nil {
+			continue
+		}
+		u := k.Collection()
+		b.cardsAt[u] = append(b.cardsAt[u], k)
+	}
+	for u, ks := range b.cardsAt {
+		sort.SliceStable(ks, func(i, j int) bool { return cardLess(ks[i], ks[j]) })
+		for i, k := range ks {
+			b.cardHref[k.Slug()] = pageURL(u, i/cardsPerPage) + "#" + k.Anchor()
+		}
+	}
+}
+
+// cardLess sorts cards by their local slug, with the numbers in order: E0382 before E0499, pep-8 before pep-634.
+func cardLess(a, b *node.Card) bool {
+	x, y := a.Local(), b.Local()
+	if strings.EqualFold(x, y) {
+		return x < y
+	}
+	return naturalLess(strings.ToLower(x), strings.ToLower(y))
+}
+
+func naturalLess(x, y string) bool {
+	for x != "" && y != "" {
+		dx, dy := digits(x), digits(y)
+		if dx > 0 && dy > 0 {
+			nx, ny := strings.TrimLeft(x[:dx], "0"), strings.TrimLeft(y[:dy], "0")
+			if len(nx) != len(ny) {
+				return len(nx) < len(ny)
+			}
+			if nx != ny {
+				return nx < ny
+			}
+			x, y = x[dx:], y[dy:]
+			continue
+		}
+		if x[0] != y[0] {
+			return x[0] < y[0]
+		}
+		x, y = x[1:], y[1:]
+	}
+	return len(x) < len(y)
+}
+
+func digits(s string) int {
+	i := 0
+	for i < len(s) && s[i] >= '0' && s[i] <= '9' {
+		i++
+	}
+	return i
+}
+
+func pageURL(u string, page int) string {
+	if page == 0 {
+		return u
+	}
+	return fmt.Sprintf("%spage/%d/", u, page+1)
+}
+
+// cardViews are the cards of one collection page.
+func (b *builder) cardViews(ks []*node.Card) []CardView {
+	out := make([]CardView, 0, len(ks))
+	for _, k := range ks {
+		v := CardView{Anchor: k.Anchor(), Heading: k.Heading(), Local: k.Local(), Summary: k.Summary, Kind: k.Kind, Code: k.Signature}
+		v.Record = "/" + k.Slug() + ".json"
+		v.Help = "/contribute/#promote-a-card"
+		add := func(key, val string, code bool) {
+			if val != "" {
+				v.Facts = append(v.Facts, Fact{Key: key, Value: val, Code: code})
+			}
+		}
+		switch k.Kind {
+		case "diagnostic":
+			add("Code", k.Code, true)
+			add("Severity", k.Severity, false)
+			for _, m := range k.MessageTemplates {
+				add("Message", m, true)
+			}
+		case "proposal":
+			add("Status", k.Status, false)
+			add("Type", k.Type, false)
+			add("Created", k.Created, false)
+			add("Release", k.Release, false)
+			add("Authors", strings.Join(k.Authors, ", "), false)
+		case "api":
+			add("Kind", k.Entity, false)
+			add("Module", k.Module, true)
+			add("Deprecated", k.Deprecated, false)
+		}
+		add("Since", k.Since, false)
+		add("Removed", k.Removed, false)
+		for _, s := range append(append(append([]string(nil), k.Features...), k.Concepts...), k.Tasks...) {
+			v.Links = append(v.Links, b.link(s))
+		}
+		for _, s := range []string{k.Source.URL, k.URL, k.Doc.URL} {
+			if s != "" && !hasURL(v.Sources, s) {
+				v.Sources = append(v.Sources, Link{Name: hostOf(s), URL: s})
+			}
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
+func hasURL(ls []Link, u string) bool {
+	for _, l := range ls {
+		if l.URL == u {
+			return true
+		}
+	}
+	return false
+}
+
+func hostOf(u string) string {
+	s := strings.TrimPrefix(strings.TrimPrefix(u, "https://"), "http://")
+	if i := strings.IndexByte(s, '/'); i > 0 {
+		s = s[:i]
+	}
+	return s
+}
+
+// cardLead is the lead of a collection page.
+func (b *builder) cardLead(owner, part string, n int) (string, string) {
+	name := owner
+	if l := b.c.LangByID[owner]; l != nil {
+		name = l.Name
+	} else if m := b.c.BySlug[owner]; m != nil {
+		name = m.Name
+	}
+	switch part {
+	case "errors":
+		return name + " errors and diagnostics", fmt.Sprintf("The error codes and warnings of %s, with the message that each one prints and what causes it. This page has %s.", name, plural(n, "card", "cards"))
+	case "lints":
+		return name + " lints", fmt.Sprintf("The lint rules of %s, with what each one finds. This page has %s.", name, plural(n, "card", "cards"))
+	case "proposals":
+		return name + " proposals", fmt.Sprintf("The proposals that changed %s, with their status and the release that took them. This page has %s.", name, plural(n, "card", "cards"))
+	}
+	return name, fmt.Sprintf("This page has %s.", plural(n, "card", "cards"))
+}
+
+// cardPages writes each collection page that no area page wrote, the index /<owner>/api/ of each owner, and the JSON record of each card.
+func (b *builder) cardPages() error {
+	urls := make([]string, 0, len(b.cardsAt))
+	for u := range b.cardsAt {
+		urls = append(urls, u)
+	}
+	sort.Strings(urls)
+	apiGroups := map[string][]string{}
+	for _, u := range urls {
+		ks := b.cardsAt[u]
+		k0 := ks[0]
+		if k0.Kind == "api" {
+			apiGroups[k0.Owner] = append(apiGroups[k0.Owner], u)
+		}
+		if b.c.BySlug[strings.Trim(u, "/")] != nil {
+			continue
+		}
+		part := strings.Split(strings.Trim(u, "/"), "/")
+		var heading, lead string
+		crumbs := b.ownerCrumbs(k0.Owner)
+		if k0.Kind == "api" {
+			heading = k0.Group()
+			lead = fmt.Sprintf("The entries of %s in the %s reference. This page has %s.", k0.Group(), b.ownerName(k0.Owner), plural(len(ks), "card", "cards"))
+			crumbs = append(crumbs, Link{Name: collectionNames["api"], URL: "/" + k0.Owner + "/api/"})
+		} else {
+			heading, lead = b.cardLead(k0.Owner, part[len(part)-1], len(ks))
+		}
+		first := 0
+		if b.cardDone[u] {
+			// An area page is the first page.
+			first = 1
+		}
+		if err := b.cardList(u, heading, lead, crumbs, ks, first); err != nil {
+			return err
+		}
+	}
+	owners := make([]string, 0, len(apiGroups))
+	for o := range apiGroups {
+		owners = append(owners, o)
+	}
+	sort.Strings(owners)
+	for _, o := range owners {
+		u := "/" + o + "/api/"
+		if b.c.BySlug[o+"/api"] != nil {
+			continue
+		}
+		name := b.ownerName(o)
+		p := ListPage{Base: b.base(name+" "+strings.ToLower(collectionNames["api"]), "The modules, types and functions of the "+name+" standard library.", u)}
+		p.Section, p.Heading = "languages", name+" "+strings.ToLower(collectionNames["api"])
+		p.Lead = fmt.Sprintf("The modules, types and functions of the %s standard library. Each entry gives the signature, the release that added it and a link to the official documentation.", name)
+		p.Crumbs = b.ownerCrumbs(o)
+		p.Hue = b.hueOf("languages")
+		for _, gu := range apiGroups[o] {
+			ks := b.cardsAt[gu]
+			p.Tiles = append(p.Tiles, Tile{Name: ks[0].Group(), URL: gu, Hue: p.Hue, Count: len(ks), Unit: "card"})
+		}
+		if err := b.page("list", u, p); err != nil {
+			return err
+		}
+	}
+	for _, k := range b.c.Cards {
+		if b.cardHref[k.Slug()] == "" {
+			continue
+		}
+		rec := map[string]any{}
+		for key, val := range k.Raw {
+			rec[key] = val
+		}
+		rec["url"] = b.opt.BaseURL + b.cardHref[k.Slug()]
+		if k.URL != "" {
+			rec["source_url"] = k.URL
+		}
+		data, err := json.Marshal(rec)
+		if err != nil {
+			return err
+		}
+		if err := b.write("/"+k.Slug()+".json", data); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// cardList writes the pages of one collection, from the page first (0 is the first page).
+func (b *builder) cardList(u, heading, lead string, crumbs []Link, ks []*node.Card, first int) error {
+	pages := (len(ks) + cardsPerPage - 1) / cardsPerPage
+	for i := first; i < pages; i++ {
+		end := min((i+1)*cardsPerPage, len(ks))
+		pu := pageURL(u, i)
+		h := heading
+		if pages > 1 {
+			h = fmt.Sprintf("%s, page %d of %d", heading, i+1, pages)
+		}
+		p := ListPage{Base: b.base(h, lead, pu)}
+		p.Section, p.Heading, p.Lead = "languages", h, lead
+		p.Crumbs = crumbs
+		p.Hue = b.hueOf("languages")
+		p.Cards = b.cardViews(ks[i*cardsPerPage : end])
+		p.Pager = pager(u, i, pages)
+		if err := b.page("list", pu, p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func pager(u string, i, pages int) []Link {
+	if pages < 2 {
+		return nil
+	}
+	var out []Link
+	for j := 0; j < pages; j++ {
+		l := Link{Name: fmt.Sprint(j + 1), URL: pageURL(u, j)}
+		if j == i {
+			l.Note = "current"
+		}
+		out = append(out, l)
+	}
+	return out
+}
+
+func (b *builder) ownerName(o string) string {
+	if l := b.c.LangByID[o]; l != nil {
+		return l.Name
+	}
+	if n := b.c.BySlug[o]; n != nil {
+		return n.Name
+	}
+	return humanize(o)
+}
+
+func (b *builder) ownerCrumbs(o string) []Link {
+	if b.c.LangByID[o] != nil {
+		return []Link{{Name: "Languages", URL: "/languages/"}, {Name: b.ownerName(o), URL: "/" + o + "/"}}
+	}
+	if n := b.c.BySlug[o]; n != nil {
+		return []Link{{Name: n.Name, URL: "/" + n.Slug + "/"}}
+	}
+	return nil
+}
+
+// cardTiles are the tiles of the card collections of an owner that no sub-area of the language guide shows, for the language page.
+func (b *builder) cardTiles(owner string, shown map[string]bool) []Tile {
+	hue := b.hueOf("languages")
+	count := map[string]int{}
+	for u, ks := range b.cardsAt {
+		k0 := ks[0]
+		if k0.Owner != owner {
+			continue
+		}
+		if k0.Kind == "api" {
+			u = "/" + owner + "/api/"
+		}
+		count[u] += len(ks)
+	}
+	urls := make([]string, 0, len(count))
+	for u := range count {
+		if !shown[u] {
+			urls = append(urls, u)
+		}
+	}
+	sort.Strings(urls)
+	var out []Tile
+	for _, u := range urls {
+		part := strings.Split(strings.Trim(u, "/"), "/")
+		name := collectionNames[part[len(part)-1]]
+		if name == "" {
+			name = humanize(part[len(part)-1])
+		}
+		out = append(out, Tile{Name: name, URL: u, Hue: hue, Count: count[u], Unit: "card"})
+	}
+	return out
+}

@@ -131,6 +131,7 @@ func Run(c *node.Corpus, opt Options) []Finding {
 		r.add("T01", Block, rel(c.Root, err.Error()), 0, "%v", err)
 	}
 	r.tags()
+	r.cards()
 	r.oldSlugs()
 	r.committedBuild()
 	slugs := map[string][]*node.Node{}
@@ -665,7 +666,7 @@ func (r *run) links(n *node.Node) {
 
 // known tells if a link path names a node, an area or a site page. A path under a reserved word, such as /spec/04-object-model/, is a site page that prog site check checks. A path with more than one part that does not start with a node is outside the scope of the audit.
 func (r *run) known(x string) bool {
-	if r.c.BySlug[x] != nil {
+	if r.c.BySlug[x] != nil || r.cardURL(x) {
 		return true
 	}
 	for _, a := range r.c.AreaByID {

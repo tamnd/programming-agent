@@ -122,3 +122,41 @@ func TestKindPages(t *testing.T) {
 		}
 	}
 }
+
+func TestCardPages(t *testing.T) {
+	out := buildTest(t)
+	read := func(p string) string {
+		t.Helper()
+		b, err := os.ReadFile(filepath.Join(out, p))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	cases := map[string][]string{
+		"rust/errors/index.html":         {`id="E0382"`, "use of moved value", `href="/rust/errors/E0382.json"`, "Help write this page"},
+		"python/proposals/index.html":    {`id="pep-634"`, "Structural Pattern Matching: Specification", "Brandt Bucher, Guido van Rossum", "peps.python.org"},
+		"python/api/index.html":          {`href="/python/api/str/"`, "1 card"},
+		"python/api/str/index.html":      {`id="str.split"`, "str.split(sep=None, maxsplit=-1)"},
+		"javascript/api/JSON/index.html": {`id="JSON.parse"`},
+		"python/index.html":              {`href="/python/api/"`, `href="/python/proposals/"`},
+		"api/moved.json":                 {`"/rust/errors/E0382":"/rust/errors/#E0382"`, `"/t/9STRSP":"/python/api/str/#str.split"`},
+		"python/api/str.split.json":      {`"url":"https://programming.tamnd.com/python/api/str/#str.split"`},
+	}
+	for p, wants := range cases {
+		s := read(p)
+		for _, w := range wants {
+			if !strings.Contains(s, w) {
+				t.Errorf("%s has no %q", p, w)
+			}
+		}
+	}
+}
+
+func TestNaturalLess(t *testing.T) {
+	for _, c := range [][2]string{{"e0382", "e0499"}, {"pep-8", "pep-634"}, {"e99", "e100"}, {"str.join", "str.split"}} {
+		if !naturalLess(c[0], c[1]) || naturalLess(c[1], c[0]) {
+			t.Errorf("%s is not before %s", c[0], c[1])
+		}
+	}
+}
