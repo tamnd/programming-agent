@@ -143,12 +143,19 @@ func mustRender(t *testing.T, src string) Result {
 
 func TestFailsNote(t *testing.T) {
 	src := "```rust fails expect=error:E0502 id=a\nfn main() {}\n```\n\n```python fails expect=exception:KeyError id=b\nx = {}\n```\n\n```java fails expect=compile id=c\nclass A {}\n```\n"
-	r, err := Render(src, nil)
+	resolve := func(slug string) (string, string, bool) {
+		if slug == "rust/errors/E0502" {
+			return "E0502", "/rust/errors/#E0502", true
+		}
+		return "", "", false
+	}
+	r, err := RenderWith(src+"\n```rust fails expect=error:E9999 id=d\nfn main() {}\n```\n", Options{Resolve: resolve})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		`The error is <a href="/rust/errors/E0502/"><code>E0502</code></a>.`,
+		`The error is <a href="/rust/errors/#E0502"><code>E0502</code></a>.`,
+		`The error is <code>E9999</code>.`,
 		"This code raises <code>KeyError</code>, on purpose.",
 		"This code does not compile, on purpose.",
 	} {
