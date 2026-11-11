@@ -279,7 +279,7 @@ func (ss *Session) Close() {
 		ss.custom.Close()
 		ss.custom = nil
 	}
-	ss.r.reap()
+	ss.r.reap(ss.dir)
 	if !ss.r.Keep {
 		_ = os.RemoveAll(ss.dir)
 	}

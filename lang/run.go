@@ -102,9 +102,10 @@ func (r *Runner) command(ctx context.Context, lang, dir string, c []string) *exe
 	return cmd
 }
 
-func (r *Runner) reap() {
+// reap removes the containers that still run in the work directory dir.
+func (r *Runner) reap(dir string) {
 	if r.Box != nil {
-		r.Box.Reap()
+		r.Box.Reap(dir)
 	}
 }
 
@@ -161,7 +162,7 @@ func (r *Runner) Test(n *node.Node, im node.Impl) status.Test {
 	if !r.Keep {
 		defer os.RemoveAll(dir)
 	}
-	defer r.reap()
+	defer r.reap(dir)
 	tree, err := r.Gen(dir, n, im)
 	if err != nil {
 		t.Output = err.Error()

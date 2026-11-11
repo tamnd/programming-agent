@@ -36,7 +36,7 @@ type Sandbox struct {
 	Pids int
 
 	mu      sync.Mutex
-	names   []string
+	names   map[string][]string
 	pulled  map[string]error
 	version map[string]string
 	derived map[string]*derivedImage
@@ -109,10 +109,13 @@ func (s *Sandbox) Argv(lang string, interactive bool, mounts []Mount, cmd []stri
 // ArgvImage is Argv with an image that is not in the manifest, such as the image with the packages of a lock file (spec 07.7). The container has the same limits and no network.
 func (s *Sandbox) ArgvImage(image string, interactive bool, mounts []Mount, cmd []string) []string {
 	name := "algo-" + randomHex(6)
-	s.mu.Lock()
-	s.names = append(s.names, name)
-	s.mu.Unlock()
 	work := mounts[0].Dir
+	s.mu.Lock()
+	if s.names == nil {
+		s.names = map[string][]string{}
+	}
+	s.names[work] = append(s.names[work], name)
+	s.mu.Unlock()
 	// The container is Linux, so its paths use a slash on every host.
 	home := path.Join(work, ".prog-home")
 	a := []string{s.Engine, "run", "--rm", "--name", name, "--label", "prog.sandbox=1"}
@@ -169,11 +172,21 @@ func (s *Sandbox) Version(lang string, cmd []string) string {
 	return v
 }
 
-// Reap removes the containers that are still there, such as the container of an adapter that was killed after a timeout. Killing the engine client does not stop its container.
-func (s *Sandbox) Reap() {
+// Reap removes the containers that are still there, such as the container of an adapter that was killed after a timeout. Killing the engine client does not stop its container. With work directories, Reap removes only the containers that have one of them as the work directory, so that a run that ends does not stop the runs that go on at the same time. With no argument, Reap removes all the containers of the sandbox.
+func (s *Sandbox) Reap(work ...string) {
 	s.mu.Lock()
-	names := s.names
-	s.names = nil
+	var names []string
+	if len(work) == 0 {
+		for _, n := range s.names {
+			names = append(names, n...)
+		}
+		s.names = nil
+	} else {
+		for _, w := range work {
+			names = append(names, s.names[w]...)
+			delete(s.names, w)
+		}
+	}
 	s.mu.Unlock()
 	if len(names) == 0 {
 		return
