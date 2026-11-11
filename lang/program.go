@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -47,7 +48,7 @@ var Programs = map[string]Program{
 	"cpp":        {ID: "cpp", Main: "main.cpp", Tools: []string{"c++"}, Steps: [][]string{{"c++", "-std=c++23", "-Wall", "-o", "main", "main.cpp"}, {"./main"}}, Version: []string{"c++", "--version"}},
 	"java":       {ID: "java", Main: "Main.java", Tools: []string{"javac", "java"}, Steps: [][]string{{"javac", "-d", "classes", "Main.java"}, {"java", "-cp", "classes", "Main"}}, Version: []string{"javac", "-version"}},
 	"kotlin":     {ID: "kotlin", Main: "main.kt", Tools: []string{"kotlinc", "java"}, Steps: [][]string{{"kotlinc", "-nowarn", "main.kt", "-include-runtime", "-d", "main.jar"}, {"java", "-jar", "main.jar"}}, Version: []string{"kotlinc", "-version"}},
-	"csharp":     {ID: "csharp", Main: "main.cs", Tools: []string{"dotnet"}, Steps: [][]string{{"dotnet", "build", "main.cs", "-o", "out", "-v", "q", "-nologo", "-clp:NoSummary;ErrorsOnly"}, {"dotnet", "out/main.dll"}}, Version: []string{"dotnet", "--version"}},
+	"csharp":     {ID: "csharp", Main: "main.cs", Tools: []string{"dotnet"}, Steps: [][]string{{"dotnet", "build", "main.cs", "-p:PublishAot=false", "-o", "out", "-v", "q", "-nologo", "-clp:NoSummary;ErrorsOnly"}, {"dotnet", "out/main.dll"}}, Version: []string{"dotnet", "--version"}},
 	"bash":       {ID: "bash", Main: "main.sh", Tools: []string{"bash"}, Steps: [][]string{{"bash", "main.sh"}}, Version: []string{"bash", "--version"}},
 	"powershell": {ID: "powershell", Main: "main.ps1", Tools: []string{"pwsh"}, Steps: [][]string{{"pwsh", "-NoProfile", "-NonInteractive", "-File", "main.ps1"}}, Version: []string{"pwsh", "--version"}},
 	"sql":        {ID: "sql", Main: "main.sql", Tools: []string{"sqlite3"}, Steps: [][]string{{"sqlite3", "-bail", ":memory:", ".read main.sql"}}, Version: []string{"sqlite3", "--version"}},
@@ -172,10 +173,8 @@ func (r *Runner) RunProgram(p Program, files map[string]string, stdin string, ar
 			}
 			if !last {
 				res.Phase = "build"
-				// A build tool such as dotnet writes the errors to stdout. Keep both streams for the signature check.
-				if res.Stderr == "" {
-					res.Stderr = res.Stdout
-				}
+				// A build tool such as dotnet writes the errors to stdout and its notices to stderr. Keep both streams for the signature check.
+				res.Stderr = strings.TrimSpace(res.Stderr + "\n" + res.Stdout)
 				res.Stdout = ""
 			}
 			break
@@ -185,9 +184,13 @@ func (r *Runner) RunProgram(p Program, files map[string]string, stdin string, ar
 	return res, nil
 }
 
-// clean replaces the path of the run directory with $WORK, so that the output is the same on each run (spec 07.6).
+// rustcSource matches the path of the standard library in a message of rustc. The path holds the commit of the compiler, which changes with each release.
+var rustcSource = regexp.MustCompile(`/rustc/[0-9a-f]{40}/`)
+
+// clean replaces the path of the run directory with $WORK, so that the output is the same on each run (spec 07.6). It also replaces the commit in the paths of the Rust standard library with $RUSTC, so that the output is the same with each release of rustc.
 func clean(s, dir string) string {
 	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = rustcSource.ReplaceAllString(s, "/rustc/$$RUSTC/")
 	// macOS gives the temporary directory as /var/... or /tmp/..., and the tools may print the real path /private/var/... or /private/tmp/.... The real path goes first, because it holds the other one.
 	if strings.HasPrefix(dir, "/var/") || strings.HasPrefix(dir, "/tmp/") {
 		s = strings.ReplaceAll(s, "/private"+dir, "$WORK")
