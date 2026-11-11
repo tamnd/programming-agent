@@ -55,6 +55,7 @@ var Rules = map[string]string{
 	"T04": "the path of the node matches its area",
 	"T05": "no status, level or badge is written in front matter",
 	"T06": "no provisional id is left on main",
+	"T08": "each top area has a README at nodes/<area>/README.md with the sections What it holds and What it does not hold",
 	"G01": "prereqs edges form a DAG",
 	"G02": "variant_of and generalizes edges have no cycle",
 	"G03": "each solves target is a problem node",
@@ -143,6 +144,7 @@ func Run(c *node.Corpus, opt Options) []Finding {
 	r.cards()
 	r.oldSlugs()
 	r.committedBuild()
+	r.areaDocs()
 	slugs := map[string][]*node.Node{}
 	for _, n := range c.Nodes {
 		slugs[n.Slug] = append(slugs[n.Slug], n)
@@ -720,6 +722,23 @@ func (r *run) committedBuild() {
 	for _, p := range strings.Split(string(out), "\x00") {
 		if p != "" {
 			r.add("I15", Block, p, 0, "the file is under build/, which only the build writes; remove it with git rm --cached")
+		}
+	}
+}
+
+// areaDocs checks that each top area has a README that says what the area holds and what it does not hold (spec 05.2, milestone M1).
+func (r *run) areaDocs() {
+	for _, a := range r.c.Areas {
+		p := "nodes/" + a.ID + "/README.md"
+		doc, ok := r.c.AreaDocs[a.ID]
+		if !ok {
+			r.add("T08", Warn, p, 0, "the area %s has no README", a.ID)
+			continue
+		}
+		for _, h := range []string{"## What it holds", "## What it does not hold"} {
+			if !strings.Contains(doc, "\n"+h+"\n") && !strings.HasPrefix(doc, h+"\n") {
+				r.add("T08", Warn, p, 0, "the README has no section %q", strings.TrimPrefix(h, "## "))
+			}
 		}
 	}
 }

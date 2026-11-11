@@ -84,6 +84,8 @@ type Corpus struct {
 	ByTag    map[string]*Node
 	Areas    []Area
 	AreaByID map[string]*Area // keyed by Area.Path()
+	// AreaDocs holds the README of each top area that has one, keyed by the area id. The README says what the area holds and what it does not hold (spec 05.2).
+	AreaDocs map[string]string
 	// Template is the list of sub-areas of a language tree, from topics/languages.yaml (spec 05.3).
 	Template []Area
 	Langs    []Lang
@@ -114,6 +116,7 @@ func Load(root string) (*Corpus, error) {
 		BySlug:   map[string]*Node{},
 		ByTag:    map[string]*Node{},
 		AreaByID: map[string]*Area{},
+		AreaDocs: map[string]string{},
 		LangByID: map[string]*Lang{},
 		Reserved: map[string]bool{},
 	}
@@ -143,6 +146,14 @@ func Load(root string) (*Corpus, error) {
 				leaf.Parent = sub.Path()
 				c.AreaByID[leaf.Path()] = leaf
 			}
+		}
+	}
+	for _, top := range c.Areas {
+		b, err := os.ReadFile(filepath.Join(root, "nodes", top.ID, "README.md"))
+		if err == nil {
+			c.AreaDocs[top.ID] = string(b)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
 		}
 	}
 	var reserved []string

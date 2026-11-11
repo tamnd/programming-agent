@@ -42,6 +42,13 @@ func TestBuild(t *testing.T) {
 			t.Errorf("%s is missing", f)
 		}
 	}
+	area, err := os.ReadFile(filepath.Join(out, "data-and-values/index.html"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(area), "What it does not hold") {
+		t.Error("the area page does not show the README of the area")
+	}
 	page, err := os.ReadFile(filepath.Join(out, "search-a-sorted-list/index.html"))
 	if err != nil {
 		t.Fatal(err)
