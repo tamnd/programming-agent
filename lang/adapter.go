@@ -31,8 +31,8 @@ var (
 	CaseTimeout = 10 * time.Second
 )
 
-// testEnv is added to the environment of each build, test and adapter.
-var testEnv = []string{"NO_COLOR=1", "CARGO_TERM_COLOR=never", "DOTNET_CLI_TELEMETRY_OPTOUT=1", "DOTNET_NOLOGO=1", "PYTHONDONTWRITEBYTECODE=1"}
+// testEnv is added to the environment of each build, test and adapter. ASAN_OPTIONS turns on the check for a use of a stack variable after its function returns. GCC and Clang both build the check into each program with AddressSanitizer, and the option starts it at run time, so no compiler flag is necessary.
+var testEnv = []string{"NO_COLOR=1", "CARGO_TERM_COLOR=never", "DOTNET_CLI_TELEMETRY_OPTOUT=1", "DOTNET_NOLOGO=1", "PYTHONDONTWRITEBYTECODE=1", "ASAN_OPTIONS=detect_stack_use_after_return=1"}
 
 // adapterJob is what a generator gets and fills in. The generator writes the adapter files to Dir and sets Build and Run.
 type adapterJob struct {

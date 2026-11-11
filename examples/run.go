@@ -150,7 +150,11 @@ func (x *Runner) Run(c *Case) Result {
 	if !adjusted {
 		p = adjust(p, b)
 	}
+	// A test runner such as go test builds the tests in the same step that runs them, so a test block has a longer limit.
 	timeout := 10 * time.Second
+	if test {
+		timeout = TestTimeout
+	}
 	if t, err := strconv.Atoi(b.Attrs["timeout"]); err == nil && t > 0 && t <= 30 {
 		timeout = time.Duration(t) * time.Second
 	}
@@ -200,6 +204,9 @@ func (x *Runner) Run(c *Case) Result {
 	return res
 }
 
+// TestTimeout is the default limit of a test block. It is longer than the limit of a run block, because it includes the build of the tests.
+var TestTimeout = time.Minute
+
 // adjust applies the std=, flags= and sanitizer settings of a block to the build step of the language. The build step is the first step after the setup steps, such as go mod init.
 func adjust(p lang.Program, b *Block) lang.Program {
 	steps := make([][]string, len(p.Steps))
@@ -221,6 +228,10 @@ func adjust(p lang.Program, b *Block) lang.Program {
 	var extra []string
 	if kind, ok := strings.CutPrefix(b.Attrs["expect"], "sanitizer:"); ok && (p.ID == "c" || p.ID == "cpp") {
 		extra = append(extra, "-g", "-fsanitize="+kind, "-fno-sanitize-recover=all")
+		// Since GCC 15, libstdc++ turns on its assertions in a build with no optimization, and an assertion stops a bad index before AddressSanitizer sees it. The block expects the report of the sanitizer.
+		if p.ID == "cpp" && kind == "address" {
+			extra = append(extra, "-D_GLIBCXX_NO_ASSERTIONS")
+		}
 	}
 	flags := strings.Fields(b.Attrs["flags"])
 	extra = append(extra, flags...)
