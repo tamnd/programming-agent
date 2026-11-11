@@ -87,7 +87,7 @@ func RenderWith(src string, opt Options) (Result, error) {
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.GFM, extension.Footnote, mathExt{}, calloutExt{res: &res}),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
-		goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(&codeRenderer{res: &res, math: opt.Math}, 100))),
+		goldmark.WithRendererOptions(renderer.WithNodeRenderers(util.Prioritized(&codeRenderer{res: &res, math: opt.Math, resolve: opt.Resolve}, 100))),
 	)
 	source := []byte(src)
 	doc := md.Parser().Parse(text.NewReader(source))
@@ -197,8 +197,9 @@ func humanSlug(s string) string {
 
 // codeRenderer renders fenced code blocks.
 type codeRenderer struct {
-	res  *Result
-	math MathFunc
+	res     *Result
+	math    MathFunc
+	resolve Resolver
 }
 
 func (r *codeRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
@@ -264,7 +265,7 @@ func (r *codeRenderer) render(w util.BufWriter, src []byte, n ast.Node, entering
 	default:
 		switch {
 		case hasWord(info, "fails"):
-			_, _ = w.WriteString("<p class=\"code-note fails\">" + failsNote(lang, info) + "</p>\n")
+			_, _ = w.WriteString("<p class=\"code-note fails\">" + failsNote(lang, info, r.resolve) + "</p>\n")
 		case hasWord(info, "wrong"):
 			_, _ = w.WriteString("<p class=\"code-note wrong\">This code runs but gives a wrong answer on purpose.</p>\n")
 		}
@@ -273,8 +274,8 @@ func (r *codeRenderer) render(w util.BufWriter, src []byte, n ast.Node, entering
 	return ast.WalkSkipChildren, nil
 }
 
-// failsNote is the label of a fails block (spec 16): what the failure is, from the attribute expect, with the diagnostic linked (rule X05).
-func failsNote(lang, info string) string {
+// failsNote is the label of a fails block (spec 16): what the failure is, from the attribute expect, with the diagnostic linked (rule X05). The link goes to the page or the card of the diagnostic, which resolve finds as <lang>/errors/<code>. A diagnostic with no page and no card has no link, so that the page has no broken link.
+func failsNote(lang, info string, resolve Resolver) string {
 	var expect string
 	for _, f := range strings.Fields(info) {
 		if v, ok := strings.CutPrefix(f, "expect="); ok {
@@ -290,7 +291,12 @@ func failsNote(lang, info string) string {
 		if detail == "" {
 			return "This code does not compile, on purpose."
 		}
-		return fmt.Sprintf("This code does not compile, on purpose. The error is <a href=\"/%s/errors/%s/\"><code>%s</code></a>.", html.EscapeString(lang), detail, detail)
+		if resolve != nil {
+			if _, u, ok := resolve(lang + "/errors/" + detail); ok {
+				return fmt.Sprintf("This code does not compile, on purpose. The error is <a href=\"%s\"><code>%s</code></a>.", html.EscapeString(u), detail)
+			}
+		}
+		return fmt.Sprintf("This code does not compile, on purpose. The error is <code>%s</code>.", detail)
 	case "exception":
 		if detail == "" {
 			return "This code raises an exception, on purpose."

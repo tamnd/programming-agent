@@ -383,13 +383,17 @@ func (b *builder) base(title, desc, p string) Base {
 	return Base{Title: title, Desc: desc, Path: p, Hue: 235, Meta: b.meta}
 }
 
-// resolve finds a node or an area for a [[slug]] link.
+// resolve finds a node, an area or a card for a [[slug]] link.
 func (b *builder) resolve(slug string) (string, string, bool) {
 	if n, ok := b.c.BySlug[slug]; ok {
 		return n.Name, "/" + n.Slug + "/", true
 	}
 	if a := b.area(slug); a != nil {
 		return a.Name, a.URL(), true
+	}
+	// A card has no page of its own. Its link goes to its anchor on the collection page (spec 16.7).
+	if u := b.cardHref[slug]; u != "" {
+		return slug[strings.LastIndex(slug, "/")+1:], u, true
 	}
 	return "", "", false
 }
