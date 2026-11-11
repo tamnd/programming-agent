@@ -102,3 +102,22 @@ func TestBuildFile(t *testing.T) {
 		t.Error("no I15 finding for impl/go/go.mod")
 	}
 }
+
+func TestAreaDocs(t *testing.T) {
+	c, err := node.Load("../testdata/corpus")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, f := range Run(c, Options{Main: true}) {
+		if f.Rule == "T08" {
+			got[f.Path] = true
+		}
+	}
+	if got["nodes/data-and-values/README.md"] {
+		t.Error("T08 reports the README of data-and-values, which has both sections")
+	}
+	if !got["nodes/performance/README.md"] {
+		t.Error("T08 does not report the area performance, which has no README")
+	}
+}

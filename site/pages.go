@@ -94,11 +94,13 @@ type ListPage struct {
 	Base
 	Heading string
 	Lead    string
-	Facts   []Fact
-	Tiles   []Tile
-	Groups  []Group
-	Empty   string
-	Body    template.HTML
+	// Intro is the README of a top area, shown above its sub-areas.
+	Intro  template.HTML
+	Facts  []Fact
+	Tiles  []Tile
+	Groups []Group
+	Empty  string
+	Body   template.HTML
 	// Cards are the cards of a collection page, and Pager links the pages of a long collection.
 	Cards []CardView
 	Pager []Link
@@ -267,6 +269,9 @@ func (b *builder) areaPage(a node.Area, crumbs []Link, hue int) error {
 	p.Section, p.Heading, p.Lead = "areas", a.Name, a.Summary
 	p.Crumbs = crumbs
 	p.Hue = hue
+	if doc, ok := b.c.AreaDocs[path]; ok {
+		p.Intro = template.HTML(b.render(doc).HTML)
+	}
 	for _, s := range a.Children {
 		n := len(b.c.InArea(s.Path()))
 		p.Tiles = append(p.Tiles, Tile{Name: s.Name, URL: s.URL(), Summary: s.Summary, Hue: p.Hue, Count: n, Unit: "page", Missing: n == 0})
