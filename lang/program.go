@@ -105,7 +105,7 @@ func (r *Runner) RunProgram(p Program, files map[string]string, stdin string, ar
 	if !r.Keep {
 		defer os.RemoveAll(dir)
 	}
-	defer r.reap()
+	defer r.reap(dir)
 	if p.Seed != "" {
 		if err := copyTree(p.Seed, dir); err != nil {
 			return res, err

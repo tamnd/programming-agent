@@ -84,3 +84,17 @@ func TestSandboxNoNetwork(t *testing.T) {
 		t.Errorf("the test fails for another reason:\n%s", got.Output)
 	}
 }
+
+func TestReapKeepsOtherRuns(t *testing.T) {
+	s := NewSandbox("true", map[string]string{"python": "img"})
+	s.Argv("python", false, []Mount{{Dir: "/w/a"}}, []string{"python3"})
+	s.Argv("python", false, []Mount{{Dir: "/w/b"}}, []string{"python3"})
+	s.Reap("/w/a")
+	if len(s.names["/w/a"]) != 0 || len(s.names["/w/b"]) != 1 {
+		t.Fatalf("Reap of /w/a changed the other run: %v", s.names)
+	}
+	s.Reap()
+	if len(s.names) != 0 {
+		t.Fatalf("Reap with no argument left %v", s.names)
+	}
+}
