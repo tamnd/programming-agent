@@ -16,7 +16,7 @@ func init() {
 	Rules["R01"] = "each card row is valid JSON for its kind, has the fields of its kind, and is in the shard of its kind, owner and slug"
 	Rules["R02"] = "each card names its source with a URL"
 	Rules["R04"] = "no two cards have the same slug, and no card has the slug of a node; prog promote removes the row"
-	Rules["R05"] = "the owner of each card is a language or a node, and its features and concepts name nodes"
+	Rules["R05"] = "the owner of each card is a language or a node, and its features, concepts and parents name nodes or cards"
 }
 
 // cardFields are the fields that each kind of card must have, after the slug field.
@@ -25,6 +25,8 @@ var cardFields = map[string][]string{
 	"proposal":   {"title", "status"},
 	"api":        {"entity"},
 	"exercise":   {"title"},
+	"weakness":   {"title"},
+	"licence":    {"title"},
 }
 
 // cards runs the rules R01 to R05 on the card registers.
@@ -89,6 +91,7 @@ func (r *run) cards() {
 		}
 		r.cardLinks(k, "features", k.Features)
 		r.cardLinks(k, "concepts", k.Concepts)
+		r.cardLinks(k, "parents", k.Parents)
 	}
 }
 

@@ -132,10 +132,18 @@ func (b *builder) cardViews(ks []*node.Card) []CardView {
 			add("Kind", k.Entity, false)
 			add("Module", k.Module, true)
 			add("Deprecated", k.Deprecated, false)
+		case "weakness":
+			add("Abstraction", k.Abstraction, false)
+			add("Status", k.Status, false)
+		case "licence":
+			add("SPDX id", k.Name, true)
+			add("OSI approved", yes(k.OSIApproved), false)
+			add("FSF free", yes(k.FSFLibre), false)
+			add("Deprecated", k.Deprecated, false)
 		}
 		add("Since", k.Since, false)
 		add("Removed", k.Removed, false)
-		for _, s := range append(append(append([]string(nil), k.Features...), k.Concepts...), k.Tasks...) {
+		for _, s := range append(append(append(append([]string(nil), k.Parents...), k.Features...), k.Concepts...), k.Tasks...) {
 			v.Links = append(v.Links, b.link(s))
 		}
 		for _, s := range []string{k.Source.URL, k.URL, k.Doc.URL} {
@@ -165,8 +173,23 @@ func hostOf(u string) string {
 	return s
 }
 
+func yes(v bool) string {
+	if v {
+		return "yes"
+	}
+	return ""
+}
+
 // cardLead is the lead of a collection page.
 func (b *builder) cardLead(owner, part string, n int) (string, string) {
+	if owner == "" {
+		// The cards of a kind with no owner are in a sub-area, such as the weakness catalogue.
+		name, lead := humanize(part), ""
+		if a := b.area(part); a != nil {
+			name, lead = a.Name, a.Summary
+		}
+		return name, strings.TrimSpace(fmt.Sprintf("%s This page has %s.", lead, plural(n, "card", "cards")))
+	}
 	name := owner
 	if l := b.c.LangByID[owner]; l != nil {
 		name = l.Name

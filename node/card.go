@@ -54,6 +54,14 @@ type Card struct {
 		URL string `json:"url,omitempty"`
 	} `json:"doc,omitzero"`
 
+	// weakness
+	Abstraction string   `json:"abstraction,omitempty"`
+	Parents     []string `json:"parents,omitempty"`
+
+	// licence
+	OSIApproved bool `json:"osi_approved,omitempty"`
+	FSFLibre    bool `json:"fsf_libre,omitempty"`
+
 	Source struct {
 		URL     string `json:"url,omitempty"`
 		Licence string `json:"licence,omitempty"`
@@ -66,10 +74,13 @@ type Card struct {
 	Line int    `json:"-"`
 }
 
-// CardKinds are the kinds that are cards by default (spec 04.1), with the field that holds the local slug.
-var CardKinds = map[string]string{"diagnostic": "code", "proposal": "id", "api": "path", "exercise": "id"}
+// CardKinds are the kinds that are cards by default (spec 04.1), with the field that holds the local slug. A weakness card is a CWE entry, such as cwe-89, and a licence card is an SPDX licence, such as apache-2.0. These two kinds have no owner, so the local slug is the full slug.
+var CardKinds = map[string]string{"diagnostic": "code", "proposal": "id", "api": "path", "exercise": "id", "weakness": "id", "licence": "id"}
 
-// Local is the slug of the card inside its owner: the code of a diagnostic, the id of a proposal or an exercise, the path of an api entry.
+// CardAreas are the sub-areas whose pages show the cards of the kinds that have no owner (spec 05.2).
+var CardAreas = map[string]string{"weakness": "weakness-catalogue", "licence": "licences"}
+
+// Local is the slug of the card inside its owner: the code of a diagnostic, the id of a proposal, an exercise, a weakness or a licence, the path of an api entry.
 func (c *Card) Local() string {
 	switch CardKinds[c.Kind] {
 	case "code":
@@ -127,6 +138,9 @@ func (c *Card) Collection() string {
 		return "/" + c.Owner + "/api/" + c.Group() + "/"
 	case "exercise":
 		return "/exercises/" + c.Owner + "/"
+	}
+	if a, ok := CardAreas[c.Kind]; ok {
+		return "/" + a + "/"
 	}
 	return "/" + c.Owner + "/"
 }
