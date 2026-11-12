@@ -8,6 +8,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"html/template"
 	"io/fs"
 	"os"
@@ -563,10 +564,24 @@ func (b *builder) finish() error {
 		fmt.Fprintf(&sm, "  <url><loc>%s%s</loc><lastmod>%s</lastmod></url>\n", b.opt.BaseURL, p, b.meta.Date)
 	}
 	sm.WriteString("</urlset>\n")
-	rules, moved := b.redirects()
+	rules, moved, cardMoved := b.redirects()
 	movedJSON, err := json.Marshal(moved)
 	if err != nil {
 		return err
+	}
+	// The moved paths of the cards are many, so they go to movedShards files, and the 404 page reads only the file of its path. Each file is written, also an empty one, so that the 404 page gets no error.
+	for i := range movedShards {
+		name := fmt.Sprintf("%02x", i)
+		data, err := json.Marshal(cardMoved[name])
+		if err != nil {
+			return err
+		}
+		if cardMoved[name] == nil {
+			data = []byte("{}")
+		}
+		if err := b.write("api/moved/"+name+".json", data); err != nil {
+			return err
+		}
 	}
 	files := map[string]string{
 		"_redirects":     rules,
@@ -630,10 +645,28 @@ const headers = `/*
   Content-Type: text/plain; charset=utf-8
 `
 
-// redirects returns the rules of _redirects and the map of the other moved paths. The host reads at most 2,000 rules without a placeholder and 100 with one. The rules hold the old sub-pages and the old slugs of registers/aliases.reg. The tags and the aliases of the nodes are more than 2,000, so they go to /api/moved.json, and the 404 page sends the reader on with the map.
-func (b *builder) redirects() (string, map[string]string) {
+// movedShards is the number of files that hold the moved paths of the cards.
+const movedShards = 64
+
+// movedShard is the name of the file that holds the moved path p: the FNV-1a hash of the UTF-8 bytes of p, modulo movedShards, in two hex digits. The 404 page in site.js computes the same name.
+func movedShard(p string) string {
+	h := fnv.New32a()
+	h.Write([]byte(p))
+	return fmt.Sprintf("%02x", h.Sum32()%movedShards)
+}
+
+// redirects returns the rules of _redirects, the map of the other moved paths, and the moved paths of the cards by shard. The host reads at most 2,000 rules without a placeholder and 100 with one. The rules hold the old sub-pages and the old slugs of registers/aliases.reg. The tags and the aliases of the nodes are more than 2,000, so they go to /api/moved.json, and the 404 page sends the reader on with the map. The URLs and the tags of the cards are more than 100,000, which is too large for one file of the host, so they go to /api/moved/<shard>.json.
+func (b *builder) redirects() (string, map[string]string, map[string]map[string]string) {
 	var s strings.Builder
 	moved := map[string]string{}
+	cardMoved := map[string]map[string]string{}
+	addCard := func(from, to string) {
+		sh := movedShard(from)
+		if cardMoved[sh] == nil {
+			cardMoved[sh] = map[string]string{}
+		}
+		cardMoved[sh][from] = to
+	}
 	// /<slug>/<lang>/ goes to the tab of the language on the node page (spec 16.2). The host reads at most 100 rules with a placeholder, so there is one rule for each language that a node uses, not for each language of the register. These rules come first, so that no other rule hides them.
 	for _, l := range b.c.Langs {
 		if b.langUsed(l.ID) {
@@ -648,9 +681,9 @@ func (b *builder) redirects() (string, map[string]string) {
 	// A card has no page. Its URL and its tag go to its anchor on the collection page (spec 16.7).
 	for _, k := range b.c.Cards {
 		if to := b.cardHref[k.Slug()]; to != "" {
-			moved["/"+k.Slug()] = to
+			addCard("/"+k.Slug(), to)
 			if k.Tag != "" {
-				moved["/t/"+k.Tag] = to
+				addCard("/t/"+k.Tag, to)
 			}
 		}
 	}
@@ -684,7 +717,7 @@ func (b *builder) redirects() (string, map[string]string) {
 			moved["/"+s2] = "/" + n.Slug + "/"
 		}
 	}
-	return s.String(), moved
+	return s.String(), moved, cardMoved
 }
 
 // langUsed tells if a node has code or an example in the language.
