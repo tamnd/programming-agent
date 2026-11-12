@@ -16,7 +16,7 @@ func init() {
 	Rules["R01"] = "each card row is valid JSON for its kind, has the fields of its kind, and is in the shard of its kind, owner and slug"
 	Rules["R02"] = "each card names its source with a URL"
 	Rules["R04"] = "no two cards have the same slug, and no card has the slug of a node; prog promote removes the row"
-	Rules["R05"] = "the owner of each card is a language or a node, and its features, concepts and parents name nodes or cards"
+	Rules["R05"] = "the owner of each card is a language or a node, or for a release a language, tool, library or format card, and its features, concepts and parents name nodes or cards"
 }
 
 // cardFields are the fields that each kind of card must have, after the slug field.
@@ -91,8 +91,8 @@ func (r *run) cards() {
 		if n := r.c.BySlug[k.Slug()]; n != nil {
 			r.add("R04", Block, k.File, k.Line, "the node %s has the slug %s; remove the card row, as prog promote does", n.Rel, k.Slug())
 		}
-		if k.Owner != "" && k.Kind != "exercise" && r.c.LangByID[k.Owner] == nil && r.c.BySlug[k.Owner] == nil {
-			r.add("R05", Block, k.File, k.Line, "the owner %q is not a language of the register or a node", k.Owner)
+		if k.Owner != "" && k.Kind != "exercise" && r.c.LangByID[k.Owner] == nil && r.c.BySlug[k.Owner] == nil && !(k.Kind == "release" && node.OwnsReleases(r.c.CardBySlug[k.Owner])) {
+			r.add("R05", Block, k.File, k.Line, "the owner %q is not a language of the register, a node, or a language, tool, library or format card that can own releases", k.Owner)
 		}
 		r.cardLinks(k, "features", k.Features)
 		r.cardLinks(k, "concepts", k.Concepts)

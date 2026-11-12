@@ -20,6 +20,11 @@ func TestCardRules(t *testing.T) {
 		// R02 and R05: no source, an owner that does not exist, and a feature that names nothing.
 		"cards/api/nolang/st.jsonl": `{"tag":"NEW-str","kind":"api","owner":"nolang","path":"str.split","entity":"method","features":["python/no-such-feature"]}
 `,
+		// R05: a tool card can own a release, but a licence card cannot.
+		"cards/release/vim-editor/9_.jsonl": `{"tag":"NEW-vim-9.1","kind":"release","owner":"vim-editor","version":"9.1","name":"Vim 9.1","source":{"url":"https://www.vim.org/"}}
+`,
+		"cards/release/mit/1_.jsonl": `{"tag":"NEW-mit-1.0","kind":"release","owner":"mit","version":"1.0","name":"MIT 1.0","source":{"url":"https://opensource.org/license/mit"}}
+`,
 		// R04: the same slug twice.
 		"cards/api/python/st.jsonl": `{"tag":"9STRSP","kind":"api","owner":"python","path":"str.split","entity":"method","doc":{"url":"https://docs.python.org/3/library/stdtypes.html#str.split"}}
 {"tag":"NEW-str2","kind":"api","owner":"python","path":"str.split","entity":"method","doc":{"url":"https://docs.python.org/3/library/stdtypes.html#str.split"}}
@@ -39,6 +44,14 @@ func TestCardRules(t *testing.T) {
 				t.Errorf("%s: no finding with %q in:\n%s", rule, s, got)
 			}
 		}
+	}
+	for _, f := range fired(fs, "R05") {
+		if strings.Contains(f, "vim-editor") {
+			t.Errorf("R05 fired on the release of a tool card: %s", f)
+		}
+	}
+	if !strings.Contains(strings.Join(fired(fs, "R05"), "\n"), `owner "mit"`) {
+		t.Errorf("R05 did not fire on the release of a licence card")
 	}
 	if got := fired(fs, "T02"); len(got) != 0 {
 		t.Errorf("T02 fired on the cards: %v", got)
