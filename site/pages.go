@@ -384,7 +384,7 @@ func (b *builder) languages() error {
 	p := ListPage{Base: b.base("Languages", "The programming languages of the site, with the test framework and the toolchain of each.", "/languages/")}
 	p.Section, p.Heading = "languages", "Languages"
 	p.Lead = "Each example and each task solution runs in a pinned toolchain. A tier 1 language is in every build."
-	p.Tiles = b.langTiles()
+	p.Tiles = append(b.langTiles(), b.collectionTiles("/languages/", 235)...)
 	if err := b.page("list", "/languages/", p); err != nil {
 		return err
 	}
