@@ -185,6 +185,19 @@ func (b *builder) cardViews(ks []*node.Card) []CardView {
 			}
 			add("Latest patch", k.Latest, true)
 			add("End of life", k.EOL, false)
+		case "person":
+			add("Description", k.Class, false)
+			add("Born", k.Born, false)
+			add("Died", k.Died, false)
+			add("Also known as", strings.Join(k.Aka, ", "), false)
+		case "organization":
+			add("Description", k.Class, false)
+			add("Founded", k.Date, false)
+			add("Also known as", strings.Join(k.Aka, ", "), false)
+		case "work":
+			add("Type", k.Class, false)
+			add("Authors", strings.Join(k.Authors, ", "), false)
+			add("Published", k.Date, false)
 		case "language", "tool", "library", "format":
 			add("Class", k.Class, false)
 			if k.Appeared > 0 {
@@ -205,7 +218,11 @@ func (b *builder) cardViews(ks []*node.Card) []CardView {
 				v.Links = append(v.Links, Link{Name: plural(len(rs), "release", "releases"), URL: "/" + k.ID + "/releases/"})
 			}
 		}
-		for _, s := range []string{k.Source.URL, k.URL, k.Doc.URL, k.Website, k.Wikipedia} {
+		wd := ""
+		if k.Wikidata != "" {
+			wd = "https://www.wikidata.org/wiki/" + k.Wikidata
+		}
+		for _, s := range []string{k.Source.URL, k.URL, k.Doc.URL, k.Website, k.Wikipedia, wd} {
 			if s != "" && !hasURL(v.Sources, s) {
 				v.Sources = append(v.Sources, Link{Name: hostOf(s), URL: s})
 			}
@@ -272,13 +289,16 @@ func (b *builder) cardLead(owner, part string, n int) (string, string) {
 
 // cardCollections are the names and leads of the card collections that are not areas.
 var cardCollections = map[string][2]string{
-	"all":       {"All languages", "Each programming language, markup language, query language and notation in the Programming Language Database (PLDB), with the year it appeared, its creators and its file extensions. The languages that have a full guide on this site are on the languages page, not on this list."},
-	"tools":     {"Tools", "The editors, compilers, package managers, databases and other programs in the Programming Language Database (PLDB), with the year each one appeared and its creators."},
-	"libraries": {"Libraries and frameworks", "The libraries and frameworks in the Programming Language Database (PLDB), with the year each one appeared and its creators."},
+	"all":           {"All languages", "Each programming language, markup language, query language and notation in the Programming Language Database (PLDB), with the year it appeared, its creators and its file extensions. The languages that have a full guide on this site are on the languages page, not on this list."},
+	"tools":         {"Tools", "The editors, compilers, package managers, databases and other programs in the Programming Language Database (PLDB), with the year each one appeared and its creators."},
+	"libraries":     {"Libraries and frameworks", "The libraries and frameworks in the Programming Language Database (PLDB), with the year each one appeared and its creators."},
+	"people":        {"People", "The people who made or named items of programming, with the years of their life and what they are known for."},
+	"organizations": {"Organizations", "The companies, foundations, committees and standards bodies that made or named items of programming."},
+	"works":         {"Works", "The books, papers, essays and talks of programming, with their authors and the year of publication."},
 }
 
 // cardParents are the pages that show a tile for a card collection that is not an area.
-var cardParents = map[string]string{"/languages/all/": "/languages/", "/tools/": "/tools-and-workflow/", "/libraries/": "/tools-and-workflow/"}
+var cardParents = map[string]string{"/languages/all/": "/languages/", "/tools/": "/tools-and-workflow/", "/libraries/": "/tools-and-workflow/", "/people/": "/history-and-culture/", "/organizations/": "/history-and-culture/", "/works/": "/history-and-culture/"}
 
 // collectionTiles are the tiles of the card collections whose parent is the page u.
 func (b *builder) collectionTiles(u string, hue int) []Tile {

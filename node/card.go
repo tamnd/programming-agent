@@ -72,6 +72,11 @@ type Card struct {
 	Website    string   `json:"website,omitempty"`
 	Wikipedia  string   `json:"wikipedia,omitempty"`
 
+	// A person, organization or work card (spec 18.4). Born and Died are the years of a person. Date is the year when an organization was founded or a work was published. Wikidata is the Q identifier of the item.
+	Born     string `json:"born,omitempty"`
+	Died     string `json:"died,omitempty"`
+	Wikidata string `json:"wikidata,omitempty"`
+
 	// release: the version is the local slug, such as 3.12 or es2015.
 	Date   string `json:"date,omitempty"`
 	EOL    string `json:"eol,omitempty"`
@@ -91,10 +96,10 @@ type Card struct {
 }
 
 // CardKinds are the kinds that are cards by default (spec 04.1), with the field that holds the local slug. A weakness card is a CWE entry, such as cwe-89, and a licence card is an SPDX licence, such as apache-2.0. A language, tool, library or format card is a PLDB record, such as cobol. These kinds have no owner, so the local slug is the full slug.
-var CardKinds = map[string]string{"diagnostic": "code", "proposal": "id", "api": "path", "exercise": "id", "weakness": "id", "licence": "id", "release": "version", "language": "id", "tool": "id", "library": "id", "format": "id"}
+var CardKinds = map[string]string{"diagnostic": "code", "proposal": "id", "api": "path", "exercise": "id", "weakness": "id", "licence": "id", "release": "version", "language": "id", "tool": "id", "library": "id", "format": "id", "person": "id", "organization": "id", "work": "id"}
 
 // CardAreas are the pages that show the cards of the kinds that have no owner (spec 05.2 and 16.7). Most are sub-areas; languages/all, tools and libraries are collections with no area.
-var CardAreas = map[string]string{"weakness": "weakness-catalogue", "licence": "licences", "language": "languages/all", "tool": "tools", "library": "libraries", "format": "data-formats"}
+var CardAreas = map[string]string{"weakness": "weakness-catalogue", "licence": "licences", "language": "languages/all", "tool": "tools", "library": "libraries", "format": "data-formats", "person": "people", "organization": "organizations", "work": "works"}
 
 // OwnsReleases reports whether the card c can own release cards: a language, tool, library or format card with no owner, such as the card of Django or PostgreSQL. The releases of the product are then at /<id>/releases/.
 func OwnsReleases(c *Card) bool {

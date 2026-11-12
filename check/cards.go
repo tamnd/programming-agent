@@ -21,17 +21,20 @@ func init() {
 
 // cardFields are the fields that each kind of card must have, after the slug field.
 var cardFields = map[string][]string{
-	"diagnostic": {"title"},
-	"proposal":   {"title", "status"},
-	"api":        {"entity"},
-	"release":    {"name", "date"},
-	"language":   {"name"},
-	"tool":       {"name"},
-	"library":    {"name"},
-	"format":     {"name"},
-	"exercise":   {"title"},
-	"weakness":   {"title"},
-	"licence":    {"title"},
+	"diagnostic":   {"title"},
+	"proposal":     {"title", "status"},
+	"api":          {"entity"},
+	"release":      {"name", "date"},
+	"language":     {"name"},
+	"tool":         {"name"},
+	"library":      {"name"},
+	"format":       {"name"},
+	"exercise":     {"title"},
+	"weakness":     {"title"},
+	"licence":      {"title"},
+	"person":       {"name"},
+	"organization": {"name"},
+	"work":         {"title"},
 }
 
 // cards runs the rules R01 to R05 on the card registers.
