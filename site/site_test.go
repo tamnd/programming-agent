@@ -165,7 +165,7 @@ func TestCardPages(t *testing.T) {
 		"languages/index.html":       {`href="/languages/all/"`, "All languages"},
 		"python/releases/index.html": {"Python releases", `id="3.13"`, "2024-10-07", "3.12.12", "End of life"},
 		// The legal page reproduces the notice that the CWE terms ask for.
-		"about/legal/index.html":        {"Copyright © 2006–2026, The MITRE Corporation.", "royalty-free license"},
+		"about/legal/index.html": {"Copyright © 2006–2026, The MITRE Corporation.", "royalty-free license"},
 	}
 	for p, wants := range cases {
 		s := read(p)
