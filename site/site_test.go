@@ -146,13 +146,13 @@ func TestCardPages(t *testing.T) {
 	cases := map[string][]string{
 		"rust/errors/index.html":         {`id="E0382"`, "use of moved value", `href="/rust/errors/cards.json"`, "Help write this page"},
 		"python/proposals/index.html":    {`id="pep-634"`, "Structural Pattern Matching: Specification", "Brandt Bucher, Guido van Rossum", "peps.python.org"},
-		"python/api/index.html":          {`href="/python/api/str/"`, "1 card"},
-		"python/api/str/index.html":      {`id="str.split"`, "str.split(sep=None, maxsplit=-1)"},
+		"python/api/index.html":          {`href="/python/api/builtins/"`, "1 card"},
+		"python/api/builtins/index.html": {`id="str.split"`, "str.split(sep=None, maxsplit=-1)"},
 		"javascript/api/JSON/index.html": {`id="JSON.parse"`},
 		"python/index.html":              {`href="/python/api/"`, `href="/python/proposals/"`},
 		"data/compat/python.json":        {`"closures-and-nonlocal"`, `"version_added": "3.0"`, `"licence": "CC0-1.0"`},
-		"api/moved.json":                 {`"/rust/errors/E0382":"/rust/errors/#E0382"`, `"/t/9STRSP":"/python/api/str/#str.split"`},
-		"python/api/str/cards.json":      {`"url":"https://programming.tamnd.com/python/api/str/#str.split"`},
+		"api/moved.json":                 {`"/rust/errors/E0382":"/rust/errors/#E0382"`, `"/t/9STRSP":"/python/api/builtins/#str.split"`},
+		"python/api/builtins/cards.json": {`"url":"https://programming.tamnd.com/python/api/builtins/#str.split"`},
 		// The cards of a kind with no owner are in a sub-area. A weakness links to its parent.
 		"weakness-catalogue/index.html": {`id="cwe-89"`, "Improper Neutralization of Special Elements used in an SQL Command", `href="/weakness-catalogue/#cwe-943"`, "base"},
 		"licences/index.html":           {`id="mit"`, "MIT License", "OSI approved"},
