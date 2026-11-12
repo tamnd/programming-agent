@@ -142,6 +142,7 @@ func Run(c *node.Corpus, opt Options) []Finding {
 	}
 	r.tags()
 	r.cards()
+	r.universeRows()
 	r.oldSlugs()
 	r.committedBuild()
 	r.areaDocs()
