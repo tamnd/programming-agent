@@ -440,6 +440,9 @@ func (b *builder) link(slug string) Link {
 	if a := b.area(slug); a != nil {
 		return Link{Name: a.Name, URL: a.URL(), Kind: "area", Hue: b.hueOf(a.Path())}
 	}
+	if k := b.c.CardBySlug[slug]; k != nil && b.cardHref[slug] != "" {
+		return Link{Name: k.Heading(), URL: b.cardHref[slug], Kind: k.Kind}
+	}
 	return Link{Name: humanize(slug), URL: "/" + slug + "/", Missing: true, Note: "This page does not exist yet."}
 }
 

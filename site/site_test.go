@@ -153,6 +153,10 @@ func TestCardPages(t *testing.T) {
 		"data/compat/python.json":        {`"closures-and-nonlocal"`, `"version_added": "3.0"`, `"licence": "CC0-1.0"`},
 		"api/moved.json":                 {`"/rust/errors/E0382":"/rust/errors/#E0382"`, `"/t/9STRSP":"/python/api/str/#str.split"`},
 		"python/api/str.split.json":      {`"url":"https://programming.tamnd.com/python/api/str/#str.split"`},
+		// The cards of a kind with no owner are in a sub-area. A weakness links to its parent.
+		"weakness-catalogue/index.html": {`id="cwe-89"`, "Improper Neutralization of Special Elements used in an SQL Command", `href="/weakness-catalogue/#cwe-943"`, "base"},
+		"licences/index.html":           {`id="mit"`, "MIT License", "OSI approved"},
+		"cwe-89.json":                   {`"url":"https://programming.tamnd.com/weakness-catalogue/#cwe-89"`},
 	}
 	for p, wants := range cases {
 		s := read(p)

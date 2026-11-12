@@ -1,0 +1,2 @@
+{"tag":"NEW-cwe-89","kind":"weakness","id":"cwe-89","title":"Improper Neutralization of Special Elements used in an SQL Command","abstraction":"base","status":"stable","parents":["cwe-943"],"url":"https://cwe.mitre.org/data/definitions/89.html"}
+{"tag":"NEW-cwe-943","kind":"weakness","id":"cwe-943","title":"Improper Neutralization of Special Elements in Data Query Logic","abstraction":"class","status":"incomplete","url":"https://cwe.mitre.org/data/definitions/943.html"}
