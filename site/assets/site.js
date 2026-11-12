@@ -18,11 +18,26 @@
     });
   }
 
-  // Search. The index is search.json. It loads when the palette opens for the first time.
+  // build is the commit of the deployment. A file that the script keeps in localStorage is kept with the build, so that a new deployment replaces it.
+  var build = root.getAttribute("data-build") || "";
+  function cached(key, url) {
+    if (build) {
+      try {
+        var hit = JSON.parse(localStorage.getItem(key) || "null");
+        if (hit && hit.b === build) return Promise.resolve(hit.d);
+      } catch (e) {}
+    }
+    return fetch(url).then(function (r) { return r.json(); }).then(function (j) {
+      if (build) try { localStorage.setItem(key, JSON.stringify({ b: build, d: j })); } catch (e) {}
+      return j;
+    });
+  }
+
+  // Search. The index is search.json. It loads when the palette opens for the first time, and the browser keeps it in localStorage until the next deployment.
   var index = null, loading = null;
   function load() {
     if (index) return Promise.resolve(index);
-    if (!loading) loading = fetch("/search.json").then(function (r) { return r.json(); }).then(function (j) { index = j; return j; });
+    if (!loading) loading = cached("prog-search", "/search.json").then(function (j) { index = j; return j; });
     return loading;
   }
   function norm(s) { return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""); }
@@ -166,6 +181,73 @@
     }, { rootMargin: "0px 0px -70% 0px", threshold: [0, 1] });
     heads.forEach(function (h) { io.observe(h); });
   }
+  // The record page shows the JSON records of one collection. The fragment is the URL of the collection. The index gives the pack, the offset and the length of the records. The script asks for that range of the pack. A host that does not answer a range request sends the whole pack, and the script keeps it in the Cache API: the name of a pack has the hash of its bytes, so the copy stays good, and the next record of the same pack needs no request.
+  if (d.body.classList.contains("page-record")) {
+    var pre = d.querySelector("[data-record]"), status = d.querySelector("[data-record-status]"), links = d.querySelector("[data-record-links]");
+    var coll = decodeURIComponent(location.hash.slice(1));
+    var fail = function (msg) { status.textContent = msg; };
+    var slice = function (buf, e) { return new TextDecoder().decode(new Uint8Array(buf, e[1], e[2])); };
+    var show = function (text, pack) {
+      try { text = JSON.stringify(JSON.parse(text), null, 2); } catch (e) {}
+      pre.textContent = text; pre.hidden = false; status.hidden = true;
+      links.querySelector("[data-record-raw]").href = pack;
+      links.querySelector("[data-record-back]").href = coll;
+      links.hidden = false;
+    };
+    var open = window.caches ? caches.open("prog-records") : Promise.resolve(null);
+    fetch("/api/records.json").then(function (r) { return r.json(); }).then(function (idx) {
+      var e = idx.records[coll];
+      if (!e) return fail("No collection has the URL " + coll + ".");
+      var pack = idx.packs[e[0]];
+      return open.then(function (c) {
+        // The packs of earlier deployments go out of the cache.
+        if (c) c.keys().then(function (ks) { ks.forEach(function (k) { if (idx.packs.indexOf(new URL(k.url).pathname) < 0) c.delete(k); }); });
+        return (c ? c.match(pack) : Promise.resolve(null)).then(function (hit) {
+          if (hit) return hit.arrayBuffer().then(function (b) { show(slice(b, e), pack); });
+          return fetch(pack, { headers: { Range: "bytes=" + e[1] + "-" + (e[1] + e[2] - 1) } }).then(function (r) {
+            if (r.status === 206) return r.text().then(function (t) { show(t, pack); });
+            if (!r.ok) return fail("The pack " + pack + " did not load.");
+            if (c) c.put(pack, r.clone());
+            return r.arrayBuffer().then(function (b) { show(slice(b, e), pack); });
+          });
+        });
+      });
+    }).catch(function () { fail("The records did not load."); });
+  }
+
+  // A link is fetched when the pointer rests on it or a finger touches it, so that the next page opens at once. The script does not do this when the reader asks to save data.
+  var conn = navigator.connection;
+  if (!(conn && conn.saveData)) {
+    var done = {}, timer = null;
+    var want = function (a) {
+      if (!a || !a.href || a.origin !== location.origin || a.hasAttribute("download") || a.target) return false;
+      var p = a.pathname;
+      return !done[p] && p !== location.pathname && (p.slice(-1) === "/" || p.slice(-5) === ".html");
+    };
+    var prefetch = function (a) {
+      done[a.pathname] = true;
+      var l = d.createElement("link");
+      l.rel = "prefetch"; l.href = a.pathname;
+      d.head.appendChild(l);
+    };
+    d.addEventListener("mouseover", function (ev) {
+      var a = ev.target.closest && ev.target.closest("a");
+      if (!want(a)) return;
+      clearTimeout(timer);
+      timer = setTimeout(function () { prefetch(a); }, 65);
+    }, { passive: true });
+    d.addEventListener("mouseout", function () { clearTimeout(timer); }, { passive: true });
+    d.addEventListener("touchstart", function (ev) {
+      var a = ev.target.closest && ev.target.closest("a");
+      if (want(a)) prefetch(a);
+    }, { passive: true });
+  }
+
+  // The service worker (sw.js) keeps the assets and the pages that the reader opened, so that they open fast and with no network.
+  if ("serviceWorker" in navigator && window.isSecureContext) {
+    addEventListener("load", function () { navigator.serviceWorker.register("/sw.js").catch(function () {}); });
+  }
+
   // The 404 page looks up the path in the map of moved paths, the tags and the aliases of the nodes, and sends the reader on. The paths of the cards are in 64 files; the name of the file is the FNV-1a hash of the path, as movedShard computes it in site.go.
   if (d.body.classList.contains("page-notfound")) {
     var path = location.pathname.replace(/\/+$/, "") || "/";
@@ -176,8 +258,12 @@
       return ("0" + (h % 64).toString(16)).slice(-2);
     };
     var get = function (u) { return fetch(u).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }); };
-    var go = function (to) { location.replace(to + location.search + location.hash); };
+    var go = function (to) { location.replace(to.indexOf("#") < 0 ? to + location.search + location.hash : to); };
+    var recordPage = function (coll) { return "/api/record/#" + coll; };
     var low = path.toLowerCase();
+    // The records of a collection were in <collection>/cards.json before the record packs.
+    if (/\/cards\.json$/.test(path)) go(recordPage(path.replace(/cards\.json$/, "")));
+    else
     get("/api/moved.json").then(function (m) {
       if (m[path] || m[low]) return go(m[path] || m[low]);
       return get("/api/moved/" + shard(path) + ".json").then(function (c) {

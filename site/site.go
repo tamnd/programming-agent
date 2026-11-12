@@ -5,7 +5,9 @@ package site
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -33,6 +35,9 @@ var templateFS embed.FS
 
 //go:embed assets
 var assetFS embed.FS
+
+//go:embed sw.js
+var serviceWorker []byte
 
 // Options control a build.
 type Options struct {
@@ -70,6 +75,7 @@ type Meta struct {
 	Date     string
 	Repo     string
 	AgentURL string
+	Assets   map[string]string // the hash of each asset file, by its URL
 	Counts   Counts
 	Year     int
 }
@@ -491,6 +497,24 @@ func title(s string) string {
 	return strings.ToUpper(s[:1]) + s[1:]
 }
 
+// V returns the URL of an asset with the hash of its bytes in the query, so that a browser can keep it until it changes. A URL that is not an asset of the build is returned as it is.
+func (m *Meta) V(u string) string {
+	if h, ok := m.Assets[u]; ok {
+		return u + "?v=" + h
+	}
+	return u
+}
+
+// asset writes the file p of the assets and keeps the hash of its bytes for V.
+func (b *builder) asset(p string, data []byte) error {
+	sum := sha256.Sum256(data)
+	if b.meta.Assets == nil {
+		b.meta.Assets = map[string]string{}
+	}
+	b.meta.Assets["/"+p] = hex.EncodeToString(sum[:])[:10]
+	return b.write(p, data)
+}
+
 func (b *builder) assets() error {
 	err := fs.WalkDir(assetFS, "assets", func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
@@ -500,12 +524,15 @@ func (b *builder) assets() error {
 		if err != nil {
 			return err
 		}
-		return b.write(p, data)
+		return b.asset(p, data)
 	})
 	if err != nil {
 		return err
 	}
-	if err := b.write("assets/code.css", []byte(markup.HighlightCSS())); err != nil {
+	if err := b.asset("assets/code.css", []byte(markup.HighlightCSS())); err != nil {
+		return err
+	}
+	if err := b.write("sw.js", serviceWorker); err != nil {
 		return err
 	}
 	return fs.WalkDir(katex.Assets(), ".", func(p string, d fs.DirEntry, err error) error {
@@ -637,6 +664,14 @@ const headers = `/*
 
 /*.json
   Access-Control-Allow-Origin: *
+
+/api/records/*
+  Content-Type: application/x-ndjson; charset=utf-8
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+/sw.js
+  Cache-Control: no-cache
 
 /*.md
   Content-Type: text/markdown; charset=utf-8
