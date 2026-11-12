@@ -177,12 +177,12 @@ func (c *Card) Collection() string {
 	return "/" + c.Owner + "/"
 }
 
-// urlSegment makes a group name safe for a URL path. A space, a quote, an angle bracket and each other character that a URL must escape becomes a hyphen, so that the name of the directory and the link to it are the same text. reserved words gives reserved-words, and <stdio.h> gives stdio.h.
+// urlSegment makes a group name safe for a URL path. A space, a quote, an angle bracket and each other character that a URL must escape becomes a hyphen, so that the name of the directory and the link to it are the same text. reserved words gives reserved-words, <stdio.h> gives stdio.h, and Hash(K, V) gives Hash-K-V. A parenthesis, a star, a comma and the other sub-delimiters also become a hyphen, because the link checker and some hosts escape them.
 func urlSegment(s string) string {
 	var b strings.Builder
 	dash := false
 	for _, r := range s {
-		if r <= ' ' || strings.ContainsRune("<>?#%\"'`{}|\\^[]", r) {
+		if r <= ' ' || strings.ContainsRune("<>?#%\"'`{}|\\^[]()*,!$&;=+", r) {
 			dash = true
 			continue
 		}

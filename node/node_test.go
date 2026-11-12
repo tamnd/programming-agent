@@ -40,6 +40,9 @@ func TestAPICollectionURLSegment(t *testing.T) {
 		{"<stdio.h>", "/java/api/stdio.h/"},
 		{"std::vec", "/java/api/std::vec/"},
 		{"<>", "/java/api/builtins/"},
+		{"Hash(K, V)", "/java/api/Hash-K-V/"},
+		{"Tuple(*T)", "/java/api/Tuple-T/"},
+		{"node:tls (ssl)", "/java/api/node:tls-ssl/"},
 	} {
 		k := &Card{Kind: "api", Owner: "java", Path: "x", Module: c.module}
 		if got := k.Collection(); got != c.want {
