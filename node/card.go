@@ -62,6 +62,16 @@ type Card struct {
 	OSIApproved bool `json:"osi_approved,omitempty"`
 	FSFLibre    bool `json:"fsf_libre,omitempty"`
 
+	// language, tool, library and format: the facts of a PLDB record (spec 08.3).
+	Class      string   `json:"class,omitempty"`
+	Appeared   int      `json:"appeared,omitempty"`
+	Creators   []string `json:"creators,omitempty"`
+	Aka        []string `json:"aka,omitempty"`
+	Extensions []string `json:"extensions,omitempty"`
+	Version    string   `json:"version,omitempty"`
+	Website    string   `json:"website,omitempty"`
+	Wikipedia  string   `json:"wikipedia,omitempty"`
+
 	Source struct {
 		URL     string `json:"url,omitempty"`
 		Licence string `json:"licence,omitempty"`
@@ -74,11 +84,11 @@ type Card struct {
 	Line int    `json:"-"`
 }
 
-// CardKinds are the kinds that are cards by default (spec 04.1), with the field that holds the local slug. A weakness card is a CWE entry, such as cwe-89, and a licence card is an SPDX licence, such as apache-2.0. These two kinds have no owner, so the local slug is the full slug.
-var CardKinds = map[string]string{"diagnostic": "code", "proposal": "id", "api": "path", "exercise": "id", "weakness": "id", "licence": "id"}
+// CardKinds are the kinds that are cards by default (spec 04.1), with the field that holds the local slug. A weakness card is a CWE entry, such as cwe-89, and a licence card is an SPDX licence, such as apache-2.0. A language, tool, library or format card is a PLDB record, such as cobol. These kinds have no owner, so the local slug is the full slug.
+var CardKinds = map[string]string{"diagnostic": "code", "proposal": "id", "api": "path", "exercise": "id", "weakness": "id", "licence": "id", "language": "id", "tool": "id", "library": "id", "format": "id"}
 
-// CardAreas are the sub-areas whose pages show the cards of the kinds that have no owner (spec 05.2).
-var CardAreas = map[string]string{"weakness": "weakness-catalogue", "licence": "licences"}
+// CardAreas are the pages that show the cards of the kinds that have no owner (spec 05.2 and 16.7). Most are sub-areas; languages/all, tools and libraries are collections with no area.
+var CardAreas = map[string]string{"weakness": "weakness-catalogue", "licence": "licences", "language": "languages/all", "tool": "tools", "library": "libraries", "format": "data-formats"}
 
 // Local is the slug of the card inside its owner: the code of a diagnostic, the id of a proposal, an exercise, a weakness or a licence, the path of an api entry.
 func (c *Card) Local() string {

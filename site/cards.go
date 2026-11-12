@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/tamnd/programming-agent/node"
@@ -140,13 +141,22 @@ func (b *builder) cardViews(ks []*node.Card) []CardView {
 			add("OSI approved", yes(k.OSIApproved), false)
 			add("FSF free", yes(k.FSFLibre), false)
 			add("Deprecated", k.Deprecated, false)
+		case "language", "tool", "library", "format":
+			add("Class", k.Class, false)
+			if k.Appeared > 0 {
+				add("Appeared", strconv.Itoa(k.Appeared), false)
+			}
+			add("Creators", strings.Join(k.Creators, ", "), false)
+			add("Also known as", strings.Join(k.Aka, ", "), false)
+			add("File extensions", strings.Join(k.Extensions, " "), true)
+			add("Latest version", k.Version, true)
 		}
 		add("Since", k.Since, false)
 		add("Removed", k.Removed, false)
 		for _, s := range append(append(append(append([]string(nil), k.Parents...), k.Features...), k.Concepts...), k.Tasks...) {
 			v.Links = append(v.Links, b.link(s))
 		}
-		for _, s := range []string{k.Source.URL, k.URL, k.Doc.URL} {
+		for _, s := range []string{k.Source.URL, k.URL, k.Doc.URL, k.Website, k.Wikipedia} {
 			if s != "" && !hasURL(v.Sources, s) {
 				v.Sources = append(v.Sources, Link{Name: hostOf(s), URL: s})
 			}
@@ -187,6 +197,8 @@ func (b *builder) cardLead(owner, part string, n int) (string, string) {
 		name, lead := humanize(part), ""
 		if a := b.area(part); a != nil {
 			name, lead = a.Name, a.Summary
+		} else if t, ok := cardCollections[part]; ok {
+			name, lead = t[0], t[1]
 		}
 		return name, strings.TrimSpace(fmt.Sprintf("%s This page has %s.", lead, plural(n, "card", "cards")))
 	}
@@ -205,6 +217,35 @@ func (b *builder) cardLead(owner, part string, n int) (string, string) {
 		return name + " proposals", fmt.Sprintf("The proposals that changed %s, with their status and the release that took them. This page has %s.", name, plural(n, "card", "cards"))
 	}
 	return name, fmt.Sprintf("This page has %s.", plural(n, "card", "cards"))
+}
+
+// cardCollections are the names and leads of the card collections that are not areas.
+var cardCollections = map[string][2]string{
+	"all":       {"All languages", "Each programming language, markup language, query language and notation in the Programming Language Database (PLDB), with the year it appeared, its creators and its file extensions. The languages that have a full guide on this site are on the languages page, not on this list."},
+	"tools":     {"Tools", "The editors, compilers, package managers, databases and other programs in the Programming Language Database (PLDB), with the year each one appeared and its creators."},
+	"libraries": {"Libraries and frameworks", "The libraries and frameworks in the Programming Language Database (PLDB), with the year each one appeared and its creators."},
+}
+
+// cardParents are the pages that show a tile for a card collection that is not an area.
+var cardParents = map[string]string{"/languages/all/": "/languages/", "/tools/": "/tools-and-workflow/", "/libraries/": "/tools-and-workflow/"}
+
+// collectionTiles are the tiles of the card collections whose parent is the page u.
+func (b *builder) collectionTiles(u string, hue int) []Tile {
+	var urls []string
+	for c, p := range cardParents {
+		if p == u && len(b.cardsAt[c]) > 0 {
+			urls = append(urls, c)
+		}
+	}
+	sort.Strings(urls)
+	var out []Tile
+	for _, c := range urls {
+		ks := b.cardsAt[c]
+		parts := strings.Split(strings.Trim(c, "/"), "/")
+		name, lead := b.cardLead("", parts[len(parts)-1], len(ks))
+		out = append(out, Tile{Name: name, URL: c, Summary: lead, Hue: hue, Count: len(ks), Unit: "card"})
+	}
+	return out
 }
 
 // cardPages writes each collection page that no area page wrote, the index /<owner>/api/ of each owner, and the JSON record of each card.
@@ -227,6 +268,11 @@ func (b *builder) cardPages() error {
 		part := strings.Split(strings.Trim(u, "/"), "/")
 		var heading, lead string
 		crumbs := b.ownerCrumbs(k0.Owner)
+		if p, ok := cardParents[u]; ok && k0.Owner == "" {
+			if a := b.area(strings.Trim(p, "/")); a != nil {
+				crumbs = []Link{{Name: a.Name, URL: p}}
+			}
+		}
 		if k0.Kind == "api" {
 			heading = k0.Group()
 			lead = fmt.Sprintf("The entries of %s in the %s reference. This page has %s.", k0.Group(), b.ownerName(k0.Owner), plural(len(ks), "card", "cards"))

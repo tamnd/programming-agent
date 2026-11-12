@@ -29,6 +29,10 @@ The full terms are on the [CWE terms of use](https://cwe.mitre.org/about/termsof
 
 The licence cards use the SPDX License List data, which is under CC0 1.0. The text of each licence keeps its own terms. The site links to the text and does not copy it.
 
+### PLDB
+
+The language, tool, library and format cards use the data of the [Programming Language Database](https://pldb.io/), which its authors put in the public domain. Each card holds the name, the class, the year, the creators, the file extensions and the links of one record, and links to the PLDB page of the record.
+
 ### Proposals and diagnostics
 
 The proposal cards hold the number, the title, the status, the dates and the authors of each PEP, JEP, Rust RFC, TC39 proposal, Go proposal and WG21 paper. The diagnostic cards hold the code and the title of each compiler error. These are facts, and each card links to the document that it describes.
