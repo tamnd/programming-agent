@@ -501,6 +501,7 @@ func (b *builder) matrix() error {
 
 var docPages = []struct{ name, title, desc string }{
 	{"about", "About", "What this site is, who writes it and how a page earns its badges."},
+	{"legal", "Legal", "The licences of the site, the terms of the data that it uses from other sources, and the trademarks."},
 	{"contribute", "Contribute", "How to write a page, add an implementation, add a scene or review a proof."},
 	{"badges", "Badges", "What each level of each ladder means and how the build computes it."},
 	{"learn", "Learn", "A reading path through the site, from the first program to the design of large systems."},
@@ -513,8 +514,13 @@ func (b *builder) pages() error {
 			return err
 		}
 		r := b.render(string(src))
-		p := DocPage{Base: b.base(d.title, d.desc, "/"+d.name+"/"), Heading: d.title, Lead: d.desc, Body: template.HTML(r.HTML), TOC: r.TOC}
-		p.Section = d.name
+		u, section := "/"+d.name+"/", d.name
+		if d.name == "legal" {
+			// The legal page is part of the about section (spec 19.6).
+			u, section = "/about/legal/", "about"
+		}
+		p := DocPage{Base: b.base(d.title, d.desc, u), Heading: d.title, Lead: d.desc, Body: template.HTML(r.HTML), TOC: r.TOC}
+		p.Section = section
 		if d.name == "learn" {
 			p.Body += template.HTML(b.snippet2("doc", "learn-path", b.learnPath()))
 		}

@@ -29,7 +29,7 @@ The site is an open project. The content is in [tamnd/programming](https://githu
 
 ## Licences
 
-The text and the pictures are CC BY-SA 4.0. The code of the implementations and the scenes is MIT. The toolchain is Apache 2.0. The fonts and the KaTeX files keep their own licences.
+The text and the pictures are CC BY-SA 4.0. The code of the implementations and the scenes is MIT. The toolchain is Apache 2.0. The fonts and the KaTeX files keep their own licences. The [legal page](/about/legal/) gives the licence of each part, the terms of the data from other sources, such as CWE and SPDX, and the trademarks.
 
 ## Contact
 
