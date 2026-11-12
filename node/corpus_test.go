@@ -1,6 +1,9 @@
 package node
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestLoad(t *testing.T) {
 	c, err := Load("../testdata/corpus")
@@ -107,5 +110,31 @@ func TestSplitFront(t *testing.T) {
 	}
 	if _, _, _, err := SplitFront([]byte("no front matter\n")); err == nil {
 		t.Error("a file without front matter gave no error")
+	}
+}
+
+func TestDomainTemplates(t *testing.T) {
+	c := &Corpus{
+		Areas:    []Area{{ID: "languages", Name: "Languages"}},
+		Template: []Area{{ID: "overview", Name: "Overview"}, {ID: "memory", Name: "Memory"}},
+		Domains: []Domain{{ID: "sql", Name: "SQL", Langs: []string{"sql"},
+			Areas: []Area{{ID: "overview", Name: "Overview"}, {ID: "joins", Name: "Joins"}}}},
+		Langs: []Lang{{ID: "python", Name: "Python"}, {ID: "sql", Name: "SQL"}},
+	}
+	c.languageTrees(map[string][]Area{"python": {{ID: "packaging", Name: "Packaging", Reason: "a large part of Python work"}}})
+	got := map[string][]string{}
+	for _, l := range c.Areas[0].Children {
+		for _, a := range l.Children {
+			got[l.ID] = append(got[l.ID], a.ID)
+		}
+	}
+	if want := "overview memory packaging"; strings.Join(got["python"], " ") != want {
+		t.Errorf("python sub-areas = %v, want %s", got["python"], want)
+	}
+	if want := "overview joins"; strings.Join(got["sql"], " ") != want {
+		t.Errorf("sql sub-areas = %v, want %s", got["sql"], want)
+	}
+	if len(c.TemplateFor("go")) != 2 || len(c.TemplateFor("sql")) != 2 || c.TemplateFor("sql")[1].ID != "joins" {
+		t.Error("TemplateFor does not pick the domain template")
 	}
 }
