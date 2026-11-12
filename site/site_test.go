@@ -156,7 +156,9 @@ func TestCardPages(t *testing.T) {
 		// The cards of a kind with no owner are in a sub-area. A weakness links to its parent.
 		"weakness-catalogue/index.html": {`id="cwe-89"`, "Improper Neutralization of Special Elements used in an SQL Command", `href="/weakness-catalogue/#cwe-943"`, "base"},
 		"licences/index.html":           {`id="mit"`, "MIT License", "OSI approved"},
-		"cwe-89.json":                   {`"url":"https://programming.tamnd.com/weakness-catalogue/#cwe-89"`},
+		// The legal page reproduces the notice that the CWE terms ask for.
+		"about/legal/index.html": {"Copyright © 2006–2026, The MITRE Corporation.", "royalty-free license"},
+		"cwe-89.json":            {`"url":"https://programming.tamnd.com/weakness-catalogue/#cwe-89"`},
 	}
 	for p, wants := range cases {
 		s := read(p)
