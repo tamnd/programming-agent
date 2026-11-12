@@ -55,6 +55,7 @@ func TestCardSlugsAndCollections(t *testing.T) {
 		"cwe-89":                    "/weakness-catalogue/#cwe-89",
 		"mit":                       "/licences/#mit",
 		"cobol":                     "/languages/all/#cobol",
+		"python/3.12":               "/python/releases/#3.12",
 		"vim-editor":                "/tools/#vim-editor",
 	}
 	for slug, want := range cases {

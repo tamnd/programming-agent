@@ -35,6 +35,7 @@ var collectionNames = map[string]string{
 	"errors":    "Errors and diagnostics",
 	"lints":     "Lints",
 	"proposals": "Proposals",
+	"releases":  "Releases",
 	"api":       "Standard library reference",
 }
 
@@ -60,6 +61,10 @@ func (b *builder) cardIndex() {
 
 // cardLess sorts cards by their local slug, with the numbers in order: E0382 before E0499, pep-8 before pep-634.
 func cardLess(a, b *node.Card) bool {
+	if a.Kind == "release" && b.Kind == "release" && a.Date != b.Date {
+		// Releases are newest first.
+		return a.Date > b.Date
+	}
 	x, y := a.Local(), b.Local()
 	if strings.EqualFold(x, y) {
 		return x < y
@@ -141,6 +146,14 @@ func (b *builder) cardViews(ks []*node.Card) []CardView {
 			add("OSI approved", yes(k.OSIApproved), false)
 			add("FSF free", yes(k.FSFLibre), false)
 			add("Deprecated", k.Deprecated, false)
+		case "release":
+			add("Released", k.Date, false)
+			add("Status", k.Status, false)
+			if k.LTS {
+				add("Long-term support", "yes", false)
+			}
+			add("Latest patch", k.Latest, true)
+			add("End of life", k.EOL, false)
 		case "language", "tool", "library", "format":
 			add("Class", k.Class, false)
 			if k.Appeared > 0 {
@@ -213,6 +226,8 @@ func (b *builder) cardLead(owner, part string, n int) (string, string) {
 		return name + " errors and diagnostics", fmt.Sprintf("The error codes and warnings of %s, with the message that each one prints and what causes it. This page has %s.", name, plural(n, "card", "cards"))
 	case "lints":
 		return name + " lints", fmt.Sprintf("The lint rules of %s, with what each one finds. This page has %s.", name, plural(n, "card", "cards"))
+	case "releases":
+		return name + " releases", fmt.Sprintf("Each release of %s since the first, newest first, with its date, its status, its latest patch and its end of life. This page has %s.", name, plural(n, "card", "cards"))
 	case "proposals":
 		return name + " proposals", fmt.Sprintf("The proposals that changed %s, with their status and the release that took them. This page has %s.", name, plural(n, "card", "cards"))
 	}
