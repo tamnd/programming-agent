@@ -16,9 +16,11 @@ import (
 
 // Area is one entry of topics/areas.yaml (spec 05.2).
 type Area struct {
-	ID       string `yaml:"id" json:"id"`
-	Name     string `yaml:"name" json:"name"`
-	Summary  string `yaml:"summary,omitempty" json:"summary,omitempty"`
+	ID      string `yaml:"id" json:"id"`
+	Name    string `yaml:"name" json:"name"`
+	Summary string `yaml:"summary,omitempty" json:"summary,omitempty"`
+	// Reason says why a language adds the sub-area to its template (spec 05.3). Only nodes/languages/<lang>/areas.yaml sets it.
+	Reason   string `yaml:"reason,omitempty" json:"reason,omitempty"`
 	Children []Area `yaml:"children,omitempty" json:"children,omitempty"`
 	Parent   string `yaml:"-" json:"parent,omitempty"`
 }
@@ -88,6 +90,8 @@ type Corpus struct {
 	AreaDocs map[string]string
 	// Template is the list of sub-areas of a language tree, from topics/languages.yaml (spec 05.3).
 	Template []Area
+	// Domains are the domain templates of topics/domains.yaml (spec 05.3 and 08.6). The tree of a language in Domain.Langs gets the sub-areas of its domain template in place of Template.
+	Domains  []Domain
 	Langs    []Lang
 	LangByID map[string]*Lang
 	Reserved map[string]bool
@@ -107,6 +111,14 @@ type Corpus struct {
 	Probes compat.Results
 	// realizers maps a concept slug to the features that realize it.
 	realizers map[string][]*Node
+}
+
+// Domain is one domain template of topics/domains.yaml: the sub-areas of the tree of each language in Langs (spec 05.3 and 08.6).
+type Domain struct {
+	ID    string   `yaml:"id" json:"id"`
+	Name  string   `yaml:"name" json:"name"`
+	Langs []string `yaml:"langs" json:"langs"`
+	Areas []Area   `yaml:"areas" json:"areas"`
 }
 
 // Load reads the whole content tree at root.
@@ -133,7 +145,20 @@ func Load(root string) (*Corpus, error) {
 	if err := readYAML(filepath.Join(root, "topics", "languages.yaml"), &c.Template); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
-	c.languageTrees()
+	if err := readYAML(filepath.Join(root, "topics", "domains.yaml"), &c.Domains); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	extra := map[string][]Area{}
+	for _, l := range c.Langs {
+		var a []Area
+		if err := readYAML(filepath.Join(root, "nodes", "languages", l.ID, "areas.yaml"), &a); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		if len(a) > 0 {
+			extra[l.ID] = a
+		}
+	}
+	c.languageTrees(extra)
 	for i := range c.Areas {
 		top := &c.Areas[i]
 		c.AreaByID[top.Path()] = top
@@ -229,8 +254,20 @@ func Load(root string) (*Corpus, error) {
 	return c, nil
 }
 
-// languageTrees adds a sub-area languages/<lang> for each language of the register, with the sub-areas of the template under it (spec 05.3). It does nothing when the topic tree has no area "languages".
-func (c *Corpus) languageTrees() {
+// TemplateFor returns the sub-areas of the tree of a language: the domain template that lists the language, or else the language template (spec 05.3).
+func (c *Corpus) TemplateFor(lang string) []Area {
+	for _, d := range c.Domains {
+		for _, l := range d.Langs {
+			if l == lang {
+				return d.Areas
+			}
+		}
+	}
+	return c.Template
+}
+
+// languageTrees adds a sub-area languages/<lang> for each language of the register, with the sub-areas of its template under it, then the sub-areas that the language adds in extra (spec 05.3). It does nothing when the topic tree has no area "languages".
+func (c *Corpus) languageTrees(extra map[string][]Area) {
 	var top *Area
 	for i := range c.Areas {
 		if c.Areas[i].ID == "languages" {
@@ -249,8 +286,11 @@ func (c *Corpus) languageTrees() {
 			continue
 		}
 		tree := Area{ID: l.ID, Name: l.Name, Summary: "The guide to " + l.Name + "."}
-		for _, t := range c.Template {
+		for _, t := range c.TemplateFor(l.ID) {
 			tree.Children = append(tree.Children, Area{ID: t.ID, Name: t.Name, Summary: t.Summary})
+		}
+		for _, t := range extra[l.ID] {
+			tree.Children = append(tree.Children, Area{ID: t.ID, Name: t.Name, Summary: t.Summary, Reason: t.Reason})
 		}
 		top.Children = append(top.Children, tree)
 	}
