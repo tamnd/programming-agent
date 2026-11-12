@@ -651,7 +651,7 @@ const movedShards = 64
 // movedShard is the name of the file that holds the moved path p: the FNV-1a hash of the UTF-8 bytes of p, modulo movedShards, in two hex digits. The 404 page in site.js computes the same name.
 func movedShard(p string) string {
 	h := fnv.New32a()
-	h.Write([]byte(p))
+	_, _ = h.Write([]byte(p))
 	return fmt.Sprintf("%02x", h.Sum32()%movedShards)
 }
 
