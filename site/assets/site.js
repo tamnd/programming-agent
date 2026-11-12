@@ -166,12 +166,24 @@
     }, { rootMargin: "0px 0px -70% 0px", threshold: [0, 1] });
     heads.forEach(function (h) { io.observe(h); });
   }
-  // The 404 page looks up the path in the map of moved paths, the tags and the aliases of the nodes, and sends the reader on.
+  // The 404 page looks up the path in the map of moved paths, the tags and the aliases of the nodes, and sends the reader on. The paths of the cards are in 64 files; the name of the file is the FNV-1a hash of the path, as movedShard computes it in site.go.
   if (d.body.classList.contains("page-notfound")) {
     var path = location.pathname.replace(/\/+$/, "") || "/";
-    fetch("/api/moved.json").then(function (r) { return r.ok ? r.json() : {}; }).then(function (m) {
-      var to = m[path] || m[path.toLowerCase()];
-      if (to) location.replace(to + location.search + location.hash);
-    }).catch(function () {});
+    try { path = decodeURIComponent(path); } catch (e) {}
+    var shard = function (s) {
+      var u = new TextEncoder().encode(s), h = 0x811c9dc5;
+      for (var i = 0; i < u.length; i++) { h = Math.imul(h ^ u[i], 0x01000193) >>> 0; }
+      return ("0" + (h % 64).toString(16)).slice(-2);
+    };
+    var get = function (u) { return fetch(u).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; }); };
+    var go = function (to) { location.replace(to + location.search + location.hash); };
+    var low = path.toLowerCase();
+    get("/api/moved.json").then(function (m) {
+      if (m[path] || m[low]) return go(m[path] || m[low]);
+      return get("/api/moved/" + shard(path) + ".json").then(function (c) {
+        if (c[path]) return go(c[path]);
+        if (low !== path) return get("/api/moved/" + shard(low) + ".json").then(function (c2) { if (c2[low]) go(c2[low]); });
+      });
+    });
   }
 })();

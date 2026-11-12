@@ -151,7 +151,6 @@ func TestCardPages(t *testing.T) {
 		"javascript/api/JSON/index.html": {`id="JSON.parse"`},
 		"python/index.html":              {`href="/python/api/"`, `href="/python/proposals/"`},
 		"data/compat/python.json":        {`"closures-and-nonlocal"`, `"version_added": "3.0"`, `"licence": "CC0-1.0"`},
-		"api/moved.json":                 {`"/rust/errors/E0382":"/rust/errors/#E0382"`, `"/t/9STRSP":"/python/api/builtins/#str.split"`},
 		"python/api/builtins/cards.json": {`"url":"https://programming.tamnd.com/python/api/builtins/#str.split"`},
 		// The cards of a kind with no owner are in a sub-area. A weakness links to its parent.
 		"weakness-catalogue/index.html": {`id="cwe-89"`, "Improper Neutralization of Special Elements used in an SQL Command", `href="/weakness-catalogue/#cwe-943"`, "base"},
@@ -172,6 +171,21 @@ func TestCardPages(t *testing.T) {
 			if !strings.Contains(s, w) {
 				t.Errorf("%s has no %q", p, w)
 			}
+		}
+	}
+	// The moved paths of the cards are in the file of their shard, not in moved.json.
+	for from, to := range map[string]string{"/rust/errors/E0382": "/rust/errors/#E0382", "/t/9STRSP": "/python/api/builtins/#str.split"} {
+		if s := read("api/moved/" + movedShard(from) + ".json"); !strings.Contains(s, `"`+from+`":"`+to+`"`) {
+			t.Errorf("the shard of %s does not send it to %s", from, to)
+		}
+		if strings.Contains(read("api/moved.json"), `"`+from+`"`) {
+			t.Errorf("api/moved.json still has the card path %s", from)
+		}
+	}
+	// site.js computes the same shard: these values come from the function of the 404 page.
+	for p, want := range map[string]string{"/t/9STRSP": "12", "/rust/errors/E0382": "01", "/java/api/java.util.ArrayList.add(int,E)": "0f"} {
+		if got := movedShard(p); got != want {
+			t.Errorf("movedShard(%q) = %s, want %s as in site.js", p, got, want)
 		}
 	}
 }
