@@ -91,7 +91,7 @@ func (r *run) cards() {
 		if n := r.c.BySlug[k.Slug()]; n != nil {
 			r.add("R04", Block, k.File, k.Line, "the node %s has the slug %s; remove the card row, as prog promote does", n.Rel, k.Slug())
 		}
-		if k.Owner != "" && k.Kind != "exercise" && r.c.LangByID[k.Owner] == nil && r.c.BySlug[k.Owner] == nil && !(k.Kind == "release" && node.OwnsReleases(r.c.CardBySlug[k.Owner])) {
+		if k.Owner != "" && k.Kind != "exercise" && r.c.LangByID[k.Owner] == nil && r.c.BySlug[k.Owner] == nil && (k.Kind != "release" || !node.OwnsReleases(r.c.CardBySlug[k.Owner])) {
 			r.add("R05", Block, k.File, k.Line, "the owner %q is not a language of the register, a node, or a language, tool, library or format card that can own releases", k.Owner)
 		}
 		r.cardLinks(k, "features", k.Features)

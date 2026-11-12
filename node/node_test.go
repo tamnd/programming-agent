@@ -31,3 +31,19 @@ func TestIsTestFile(t *testing.T) {
 		}
 	}
 }
+
+func TestAPICollectionURLSegment(t *testing.T) {
+	for _, c := range []struct{ module, want string }{
+		{"java.util", "/java/api/java.util/"},
+		{"reserved words", "/java/api/reserved-words/"},
+		{"tsc --build", "/java/api/tsc--build/"},
+		{"<stdio.h>", "/java/api/stdio.h/"},
+		{"std::vec", "/java/api/std::vec/"},
+		{"<>", "/java/api/builtins/"},
+	} {
+		k := &Card{Kind: "api", Owner: "java", Path: "x", Module: c.module}
+		if got := k.Collection(); got != c.want {
+			t.Errorf("module %q: got %q, want %q", c.module, got, c.want)
+		}
+	}
+}

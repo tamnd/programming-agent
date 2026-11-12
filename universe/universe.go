@@ -106,6 +106,7 @@ func Read(root string) ([]Row, []error) {
 	var errs []error
 	for _, f := range files {
 		rel, _ := filepath.Rel(root, f)
+		rel = filepath.ToSlash(rel)
 		src := strings.TrimSuffix(filepath.Base(f), ".jsonl")
 		fh, err := os.Open(f)
 		if err != nil {
@@ -137,7 +138,7 @@ func Read(root string) ([]Row, []error) {
 		if err := sc.Err(); err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", rel, err))
 		}
-		fh.Close()
+		_ = fh.Close()
 	}
 	return rows, errs
 }

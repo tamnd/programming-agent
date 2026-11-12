@@ -65,5 +65,5 @@ func printCounts(counts []universe.Count) {
 		}
 		fmt.Fprintf(w, "%s\t%d\t%d\t%.2f%%\t%s\t\n", n.Scope, n.Total, n.Pending, 100*n.Share(), strings.Join(parts, ", "))
 	}
-	w.Flush()
+	_ = w.Flush()
 }
