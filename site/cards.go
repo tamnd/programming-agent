@@ -145,7 +145,7 @@ func (b *builder) cardViews(ks []*node.Card) []CardView {
 	out := make([]CardView, 0, len(ks))
 	for _, k := range ks {
 		v := CardView{Anchor: k.Anchor(), Heading: k.Heading(), Local: k.Local(), Summary: k.Summary, Kind: k.Kind, Code: k.Signature}
-		v.Record = b.cardColl[k.Slug()] + "cards.json"
+		v.Record = recordPage + "#" + b.cardColl[k.Slug()]
 		v.Help = "/contribute/#promote-a-card"
 		add := func(key, val string, code bool) {
 			if val != "" {
@@ -299,7 +299,7 @@ func (b *builder) collectionTiles(u string, hue int) []Tile {
 	return out
 }
 
-// cardPages writes each collection page that no area page wrote, the index /<owner>/api/ of each owner, and the file cards.json of each collection, which holds the JSON records of its cards.
+// cardPages writes each collection page that no area page wrote, the index /<owner>/api/ of each owner, and the JSON records of the cards of each collection in the record packs (packRecords).
 func (b *builder) cardPages() error {
 	urls := make([]string, 0, len(b.cardsAt))
 	for u := range b.cardsAt {
@@ -378,9 +378,10 @@ func (b *builder) cardPages() error {
 			return err
 		}
 	}
-	// One JSON file holds the records of all the cards of a collection, so that the number of files stays under the limit of the host.
+	// The records of the cards of a collection are one JSON array. The arrays go into a few packs, so that the number of files stays far under the limit of the host.
+	recs := make([]record, 0, len(urls))
 	for _, u := range urls {
-		recs := make([]map[string]any, 0, len(b.cardsAt[u]))
+		rs := make([]map[string]any, 0, len(b.cardsAt[u]))
 		for _, k := range b.cardsAt[u] {
 			rec := map[string]any{}
 			for key, val := range k.Raw {
@@ -390,17 +391,15 @@ func (b *builder) cardPages() error {
 			if k.URL != "" {
 				rec["source_url"] = k.URL
 			}
-			recs = append(recs, rec)
+			rs = append(rs, rec)
 		}
-		data, err := json.Marshal(recs)
+		data, err := json.Marshal(rs)
 		if err != nil {
 			return err
 		}
-		if err := b.write(u+"cards.json", data); err != nil {
-			return err
-		}
+		recs = append(recs, record{URL: u, Data: data})
 	}
-	return nil
+	return b.packRecords(recs)
 }
 
 // groupsOf splits the sorted cards of the page of the other modules into the cards of each module.

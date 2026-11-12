@@ -1,6 +1,7 @@
 package site
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -144,15 +145,16 @@ func TestCardPages(t *testing.T) {
 		return string(b)
 	}
 	cases := map[string][]string{
-		"rust/errors/index.html":      {`id="E0382"`, "use of moved value", `href="/rust/errors/cards.json"`, "Help write this page"},
+		"rust/errors/index.html":      {`id="E0382"`, "use of moved value", `href="/api/record/#/rust/errors/"`, "Help write this page"},
 		"python/proposals/index.html": {`id="pep-634"`, "Structural Pattern Matching: Specification", "Brandt Bucher, Guido van Rossum", "peps.python.org"},
 		// A module with fewer than smallModule cards is on the page of the other modules, and its tile points at its first card.
 		"python/api/index.html":                   {`href="/python/api/other-modules/#str.split"`, "builtins", "1 card"},
-		"python/api/other-modules/index.html":     {"Other modules", `id="str.split"`, "str.split(sep=None, maxsplit=-1)", `href="/python/api/other-modules/cards.json"`},
+		"python/api/other-modules/index.html":     {"Other modules", `id="str.split"`, "str.split(sep=None, maxsplit=-1)", `href="/api/record/#/python/api/other-modules/"`},
 		"javascript/api/other-modules/index.html": {`id="JSON.parse"`},
 		"python/index.html":                       {`href="/python/api/"`, `href="/python/proposals/"`},
 		"data/compat/python.json":                 {`"closures-and-nonlocal"`, `"version_added": "3.0"`, `"licence": "CC0-1.0"`},
-		"python/api/other-modules/cards.json":     {`"url":"https://programming.tamnd.com/python/api/other-modules/#str.split"`},
+		"api/records.json":                        {`"/python/api/other-modules/":[`, `"packs":["/api/records/000.`},
+		"api/record/index.html":                   {"data-record", `href="/api/records.json"`},
 		// The cards of a kind with no owner are in a sub-area. A weakness links to its parent.
 		"weakness-catalogue/index.html": {`id="cwe-89"`, "Improper Neutralization of Special Elements used in an SQL Command", `href="/weakness-catalogue/#cwe-943"`, "base"},
 		"licences/index.html":           {`id="mit"`, "MIT License", "OSI approved"},
@@ -164,7 +166,6 @@ func TestCardPages(t *testing.T) {
 		"python/releases/index.html": {"Python releases", `id="3.13"`, "2024-10-07", "3.12.12", "End of life"},
 		// The legal page reproduces the notice that the CWE terms ask for.
 		"about/legal/index.html":        {"Copyright © 2006–2026, The MITRE Corporation.", "royalty-free license"},
-		"weakness-catalogue/cards.json": {`"url":"https://programming.tamnd.com/weakness-catalogue/#cwe-89"`},
 	}
 	for p, wants := range cases {
 		s := read(p)
@@ -216,5 +217,45 @@ func TestTitleWords(t *testing.T) {
 		if got := titleWords(in); got != want {
 			t.Errorf("titleWords(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+// TestRecordPacks checks that the line of each collection in its pack is the JSON array of its records.
+func TestRecordPacks(t *testing.T) {
+	out := buildTest(t)
+	data, err := os.ReadFile(filepath.Join(out, "api", "records.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var idx RecordIndex
+	if err := json.Unmarshal(data, &idx); err != nil {
+		t.Fatal(err)
+	}
+	if len(idx.Records) == 0 || len(idx.Packs) == 0 {
+		t.Fatal("the index has no records")
+	}
+	for u, e := range idx.Records {
+		pack, err := os.ReadFile(filepath.Join(out, filepath.FromSlash(strings.TrimPrefix(idx.Packs[e[0]], "/"))))
+		if err != nil {
+			t.Fatal(err)
+		}
+		line := pack[e[1] : e[1]+e[2]]
+		var recs []map[string]any
+		if err := json.Unmarshal(line, &recs); err != nil {
+			t.Fatalf("%s: %v", u, err)
+		}
+		if len(recs) == 0 || !strings.HasPrefix(recs[0]["url"].(string), "https://programming.tamnd.com"+u) {
+			t.Errorf("%s: the first record is %v", u, recs[0]["url"])
+		}
+		if end := e[1] + e[2]; end < len(pack) && pack[end] != '\n' {
+			t.Errorf("%s: the line does not end at its length", u)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(out, "sw.js")); err != nil {
+		t.Error(err)
+	}
+	home, _ := os.ReadFile(filepath.Join(out, "index.html"))
+	if !strings.Contains(string(home), `/assets/site.js?v=`) {
+		t.Error("the home page loads site.js with no hash")
 	}
 }
