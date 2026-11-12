@@ -157,10 +157,11 @@ func TestCardPages(t *testing.T) {
 		"weakness-catalogue/index.html": {`id="cwe-89"`, "Improper Neutralization of Special Elements used in an SQL Command", `href="/weakness-catalogue/#cwe-943"`, "base"},
 		"licences/index.html":           {`id="mit"`, "MIT License", "OSI approved"},
 		// The PLDB cards: all languages under the languages page, and tools under tools and workflow.
-		"languages/all/index.html": {`id="cobol"`, "All languages", "1959", "Grace Hopper", "cbl cob", `href="/languages/"`},
-		"tools/index.html":         {`id="vim-editor"`, "Bram Moolenaar"},
-		"kind/language/index.html": {`href="/languages/all/"`},
-		"languages/index.html":     {`href="/languages/all/"`, "All languages"},
+		"languages/all/index.html":   {`id="cobol"`, "All languages", "1959", "Grace Hopper", "cbl cob", `href="/languages/"`},
+		"tools/index.html":           {`id="vim-editor"`, "Bram Moolenaar"},
+		"kind/language/index.html":   {`href="/languages/all/"`},
+		"languages/index.html":       {`href="/languages/all/"`, "All languages"},
+		"python/releases/index.html": {"Python releases", `id="3.13"`, "2024-10-07", "3.12.12", "End of life"},
 		// The legal page reproduces the notice that the CWE terms ask for.
 		"about/legal/index.html": {"Copyright © 2006–2026, The MITRE Corporation.", "royalty-free license"},
 		"cwe-89.json":            {`"url":"https://programming.tamnd.com/weakness-catalogue/#cwe-89"`},

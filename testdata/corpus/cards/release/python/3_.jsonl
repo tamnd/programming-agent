@@ -1,0 +1,2 @@
+{"tag":"NEW-python-3.12","kind":"release","owner":"python","version":"3.12","name":"Python 3.12","date":"2023-10-02","status":"security","latest":"3.12.12","eol":"2028-10","source":{"url":"https://peps.python.org/pep-0693/"}}
+{"tag":"NEW-python-3.13","kind":"release","owner":"python","version":"3.13","name":"Python 3.13","date":"2024-10-07","status":"bugfix","latest":"3.13.9","eol":"2029-10","source":{"url":"https://peps.python.org/pep-0719/"}}

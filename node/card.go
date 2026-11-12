@@ -72,6 +72,12 @@ type Card struct {
 	Website    string   `json:"website,omitempty"`
 	Wikipedia  string   `json:"wikipedia,omitempty"`
 
+	// release: the version is the local slug, such as 3.12 or es2015.
+	Date   string `json:"date,omitempty"`
+	EOL    string `json:"eol,omitempty"`
+	Latest string `json:"latest,omitempty"`
+	LTS    bool   `json:"lts,omitempty"`
+
 	Source struct {
 		URL     string `json:"url,omitempty"`
 		Licence string `json:"licence,omitempty"`
@@ -85,12 +91,12 @@ type Card struct {
 }
 
 // CardKinds are the kinds that are cards by default (spec 04.1), with the field that holds the local slug. A weakness card is a CWE entry, such as cwe-89, and a licence card is an SPDX licence, such as apache-2.0. A language, tool, library or format card is a PLDB record, such as cobol. These kinds have no owner, so the local slug is the full slug.
-var CardKinds = map[string]string{"diagnostic": "code", "proposal": "id", "api": "path", "exercise": "id", "weakness": "id", "licence": "id", "language": "id", "tool": "id", "library": "id", "format": "id"}
+var CardKinds = map[string]string{"diagnostic": "code", "proposal": "id", "api": "path", "exercise": "id", "weakness": "id", "licence": "id", "release": "version", "language": "id", "tool": "id", "library": "id", "format": "id"}
 
 // CardAreas are the pages that show the cards of the kinds that have no owner (spec 05.2 and 16.7). Most are sub-areas; languages/all, tools and libraries are collections with no area.
 var CardAreas = map[string]string{"weakness": "weakness-catalogue", "licence": "licences", "language": "languages/all", "tool": "tools", "library": "libraries", "format": "data-formats"}
 
-// Local is the slug of the card inside its owner: the code of a diagnostic, the id of a proposal, an exercise, a weakness or a licence, the path of an api entry.
+// Local is the slug of the card inside its owner: the code of a diagnostic, the id of a proposal, an exercise, a weakness or a licence, the path of an api entry, the version of a release.
 func (c *Card) Local() string {
 	switch CardKinds[c.Kind] {
 	case "code":
@@ -99,6 +105,8 @@ func (c *Card) Local() string {
 		return c.ID
 	case "path":
 		return c.Path
+	case "version":
+		return c.Version
 	}
 	return ""
 }
@@ -144,6 +152,8 @@ func (c *Card) Collection() string {
 		return "/" + c.Owner + "/errors/"
 	case "proposal":
 		return "/" + c.Owner + "/proposals/"
+	case "release":
+		return "/" + c.Owner + "/releases/"
 	case "api":
 		return "/" + c.Owner + "/api/" + c.Group() + "/"
 	case "exercise":

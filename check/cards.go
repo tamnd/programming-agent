@@ -24,6 +24,7 @@ var cardFields = map[string][]string{
 	"diagnostic": {"title"},
 	"proposal":   {"title", "status"},
 	"api":        {"entity"},
+	"release":    {"name", "date"},
 	"language":   {"name"},
 	"tool":       {"name"},
 	"library":    {"name"},
