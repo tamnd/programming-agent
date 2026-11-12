@@ -119,10 +119,11 @@ type builder struct {
 	report  Report
 	sitemap []string
 	search  []searchEntry
-	// cardsAt holds the cards of each collection URL, cardHref the page and anchor of each card slug, and cardDone the collection URLs that an area page already showed.
+	// cardsAt holds the cards of each collection URL, cardHref the page and anchor of each card slug, cardDone the collection URLs that an area page already showed, and cardColl the collection URL of each card slug.
 	cardsAt  map[string][]*node.Card
 	cardHref map[string]string
 	cardDone map[string]bool
+	cardColl map[string]string
 }
 
 // Build renders the corpus into opt.Out. It writes a new tree next to opt.Out and then puts it in place, so a server that reads opt.Out never sees a half-written site.

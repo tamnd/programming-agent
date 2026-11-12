@@ -15,6 +15,12 @@ import (
 // cardsPerPage is the most cards that one collection page shows (spec 16.7).
 const cardsPerPage = 200
 
+// smallModule is the smallest API module that gets its own collection page. The cards of the smaller modules of an owner go on the collection page otherModules, so that the number of files of the site stays under the limit of the host. Each module still has a tile on the API index of its owner.
+const (
+	smallModule  = 20
+	otherModules = "other-modules"
+)
+
 // CardView is one card on a collection page.
 type CardView struct {
 	Anchor  string
@@ -44,6 +50,7 @@ func (b *builder) cardIndex() {
 	b.cardsAt = map[string][]*node.Card{}
 	b.cardHref = map[string]string{}
 	b.cardDone = map[string]bool{}
+	b.cardColl = map[string]string{}
 	for _, k := range b.c.Cards {
 		if k.Local() == "" || b.c.BySlug[k.Slug()] != nil {
 			continue
@@ -52,9 +59,33 @@ func (b *builder) cardIndex() {
 		b.cardsAt[u] = append(b.cardsAt[u], k)
 	}
 	for u, ks := range b.cardsAt {
-		sort.SliceStable(ks, func(i, j int) bool { return cardLess(ks[i], ks[j]) })
+		if k0 := ks[0]; k0.Kind == "api" && len(ks) < smallModule {
+			o := "/" + k0.Owner + "/api/" + otherModules + "/"
+			if o != u {
+				b.cardsAt[o] = append(b.cardsAt[o], ks...)
+				delete(b.cardsAt, u)
+			}
+		}
+	}
+	for u, ks := range b.cardsAt {
+		if strings.HasSuffix(u, "/"+otherModules+"/") {
+			// The cards of one module stay together, in the order of the module names.
+			sort.SliceStable(ks, func(i, j int) bool {
+				gi, gj := strings.ToLower(ks[i].Group()), strings.ToLower(ks[j].Group())
+				if gi != gj {
+					return naturalLess(gi, gj)
+				}
+				if ks[i].Group() != ks[j].Group() {
+					return ks[i].Group() < ks[j].Group()
+				}
+				return cardLess(ks[i], ks[j])
+			})
+		} else {
+			sort.SliceStable(ks, func(i, j int) bool { return cardLess(ks[i], ks[j]) })
+		}
 		for i, k := range ks {
 			b.cardHref[k.Slug()] = pageURL(u, i/cardsPerPage) + "#" + k.Anchor()
+			b.cardColl[k.Slug()] = u
 		}
 	}
 }
@@ -114,7 +145,7 @@ func (b *builder) cardViews(ks []*node.Card) []CardView {
 	out := make([]CardView, 0, len(ks))
 	for _, k := range ks {
 		v := CardView{Anchor: k.Anchor(), Heading: k.Heading(), Local: k.Local(), Summary: k.Summary, Kind: k.Kind, Code: k.Signature}
-		v.Record = k.Collection() + "cards.json"
+		v.Record = b.cardColl[k.Slug()] + "cards.json"
 		v.Help = "/contribute/#promote-a-card"
 		add := func(key, val string, code bool) {
 			if val != "" {
@@ -293,7 +324,11 @@ func (b *builder) cardPages() error {
 				crumbs = []Link{{Name: a.Name, URL: p}}
 			}
 		}
-		if k0.Kind == "api" {
+		if k0.Kind == "api" && strings.HasSuffix(u, "/"+otherModules+"/") {
+			heading = "Other modules"
+			lead = fmt.Sprintf("The entries of the %s of the %s reference that have fewer than %d entries each, in the order of the module names. This page has %s.", plural(len(groupsOf(ks)), "module", "modules"), b.ownerName(k0.Owner), smallModule, plural(len(ks), "card", "cards"))
+			crumbs = append(crumbs, Link{Name: collectionNames["api"], URL: "/" + k0.Owner + "/api/"})
+		} else if k0.Kind == "api" {
 			heading = k0.Group()
 			lead = fmt.Sprintf("The entries of %s in the %s reference. This page has %s.", k0.Group(), b.ownerName(k0.Owner), plural(len(ks), "card", "cards"))
 			crumbs = append(crumbs, Link{Name: collectionNames["api"], URL: "/" + k0.Owner + "/api/"})
@@ -327,8 +362,18 @@ func (b *builder) cardPages() error {
 		p.Hue = b.hueOf("languages")
 		for _, gu := range apiGroups[o] {
 			ks := b.cardsAt[gu]
-			p.Tiles = append(p.Tiles, Tile{Name: ks[0].Group(), URL: gu, Hue: p.Hue, Count: len(ks), Unit: "card"})
+			if !strings.HasSuffix(gu, "/"+otherModules+"/") {
+				p.Tiles = append(p.Tiles, Tile{Name: ks[0].Group(), URL: gu, Hue: p.Hue, Count: len(ks), Unit: "card"})
+				continue
+			}
+			// A small module has a tile that points at its first card on the page of the other modules.
+			for _, g := range groupsOf(ks) {
+				p.Tiles = append(p.Tiles, Tile{Name: g[0].Group(), URL: b.cardHref[g[0].Slug()], Hue: p.Hue, Count: len(g), Unit: "card"})
+			}
 		}
+		sort.SliceStable(p.Tiles, func(i, j int) bool {
+			return naturalLess(strings.ToLower(p.Tiles[i].Name), strings.ToLower(p.Tiles[j].Name))
+		})
 		if err := b.page("list", u, p); err != nil {
 			return err
 		}
@@ -356,6 +401,18 @@ func (b *builder) cardPages() error {
 		}
 	}
 	return nil
+}
+
+// groupsOf splits the sorted cards of the page of the other modules into the cards of each module.
+func groupsOf(ks []*node.Card) [][]*node.Card {
+	var out [][]*node.Card
+	for i, k := range ks {
+		if i == 0 || k.Group() != ks[i-1].Group() {
+			out = append(out, nil)
+		}
+		out[len(out)-1] = append(out[len(out)-1], k)
+	}
+	return out
 }
 
 // cardList writes the pages of one collection, from the page first (0 is the first page).

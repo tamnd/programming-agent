@@ -144,14 +144,15 @@ func TestCardPages(t *testing.T) {
 		return string(b)
 	}
 	cases := map[string][]string{
-		"rust/errors/index.html":         {`id="E0382"`, "use of moved value", `href="/rust/errors/cards.json"`, "Help write this page"},
-		"python/proposals/index.html":    {`id="pep-634"`, "Structural Pattern Matching: Specification", "Brandt Bucher, Guido van Rossum", "peps.python.org"},
-		"python/api/index.html":          {`href="/python/api/builtins/"`, "1 card"},
-		"python/api/builtins/index.html": {`id="str.split"`, "str.split(sep=None, maxsplit=-1)"},
-		"javascript/api/JSON/index.html": {`id="JSON.parse"`},
-		"python/index.html":              {`href="/python/api/"`, `href="/python/proposals/"`},
-		"data/compat/python.json":        {`"closures-and-nonlocal"`, `"version_added": "3.0"`, `"licence": "CC0-1.0"`},
-		"python/api/builtins/cards.json": {`"url":"https://programming.tamnd.com/python/api/builtins/#str.split"`},
+		"rust/errors/index.html":      {`id="E0382"`, "use of moved value", `href="/rust/errors/cards.json"`, "Help write this page"},
+		"python/proposals/index.html": {`id="pep-634"`, "Structural Pattern Matching: Specification", "Brandt Bucher, Guido van Rossum", "peps.python.org"},
+		// A module with fewer than smallModule cards is on the page of the other modules, and its tile points at its first card.
+		"python/api/index.html":                   {`href="/python/api/other-modules/#str.split"`, "builtins", "1 card"},
+		"python/api/other-modules/index.html":     {"Other modules", `id="str.split"`, "str.split(sep=None, maxsplit=-1)", `href="/python/api/other-modules/cards.json"`},
+		"javascript/api/other-modules/index.html": {`id="JSON.parse"`},
+		"python/index.html":                       {`href="/python/api/"`, `href="/python/proposals/"`},
+		"data/compat/python.json":                 {`"closures-and-nonlocal"`, `"version_added": "3.0"`, `"licence": "CC0-1.0"`},
+		"python/api/other-modules/cards.json":     {`"url":"https://programming.tamnd.com/python/api/other-modules/#str.split"`},
 		// The cards of a kind with no owner are in a sub-area. A weakness links to its parent.
 		"weakness-catalogue/index.html": {`id="cwe-89"`, "Improper Neutralization of Special Elements used in an SQL Command", `href="/weakness-catalogue/#cwe-943"`, "base"},
 		"licences/index.html":           {`id="mit"`, "MIT License", "OSI approved"},
@@ -173,8 +174,11 @@ func TestCardPages(t *testing.T) {
 			}
 		}
 	}
+	if _, err := os.Stat(filepath.Join(out, "python/api/builtins/index.html")); err == nil {
+		t.Error("the small module builtins has its own page")
+	}
 	// The moved paths of the cards are in the file of their shard, not in moved.json.
-	for from, to := range map[string]string{"/rust/errors/E0382": "/rust/errors/#E0382", "/t/9STRSP": "/python/api/builtins/#str.split"} {
+	for from, to := range map[string]string{"/rust/errors/E0382": "/rust/errors/#E0382", "/t/9STRSP": "/python/api/other-modules/#str.split"} {
 		if s := read("api/moved/" + movedShard(from) + ".json"); !strings.Contains(s, `"`+from+`":"`+to+`"`) {
 			t.Errorf("the shard of %s does not send it to %s", from, to)
 		}
