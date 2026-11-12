@@ -276,6 +276,7 @@ func (b *builder) areaPage(a node.Area, crumbs []Link, hue int) error {
 		n := len(b.c.InArea(s.Path()))
 		p.Tiles = append(p.Tiles, Tile{Name: s.Name, URL: s.URL(), Summary: s.Summary, Hue: p.Hue, Count: n, Unit: "page", Missing: n == 0})
 	}
+	p.Tiles = append(p.Tiles, b.collectionTiles(url, hue)...)
 	p.Groups = b.byKind(b.c.InArea(path))
 	if ks := b.cardsAt[url]; len(ks) > 0 {
 		// A sub-area of a language guide, such as /rust/errors/, is also the collection of the cards of its owner.
@@ -334,9 +335,17 @@ func (b *builder) kinds() error {
 		if k == "technique" {
 			p.Section = "techniques"
 		}
+		if a, ok := node.CardAreas[k]; ok {
+			// The cards of the kind are on one collection page.
+			if ks := b.cardsAt["/"+a+"/"]; len(ks) > 0 {
+				parts := strings.Split(a, "/")
+				name, lead := b.cardLead("", parts[len(parts)-1], len(ks))
+				p.Tiles = append(p.Tiles, Tile{Name: name, URL: "/" + a + "/", Summary: lead, Count: len(ks), Unit: "card"})
+			}
+		}
 		if len(ns) > 0 {
 			p.Groups = []Group{{ID: "all", Title: fmt.Sprintf("All %s", kindName(k, true)), Items: b.items(ns)}}
-		} else {
+		} else if len(p.Tiles) == 0 {
 			p.Empty = fmt.Sprintf("No %s pages exist yet.", kindName(k))
 		}
 		if err := b.page("list", "/kind/"+k+"/", p); err != nil {

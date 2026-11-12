@@ -54,6 +54,8 @@ func TestCardSlugsAndCollections(t *testing.T) {
 		"javascript/api/JSON.parse": "/javascript/api/JSON/#JSON.parse",
 		"cwe-89":                    "/weakness-catalogue/#cwe-89",
 		"mit":                       "/licences/#mit",
+		"cobol":                     "/languages/all/#cobol",
+		"vim-editor":                "/tools/#vim-editor",
 	}
 	for slug, want := range cases {
 		k := c.CardBySlug[slug]
