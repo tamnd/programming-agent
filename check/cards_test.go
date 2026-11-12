@@ -50,7 +50,7 @@ func TestCardSlugsAndCollections(t *testing.T) {
 	cases := map[string]string{
 		"rust/errors/E0382":         "/rust/errors/#E0382",
 		"python/proposals/pep-634":  "/python/proposals/#pep-634",
-		"python/api/str.split":      "/python/api/str/#str.split",
+		"python/api/str.split":      "/python/api/builtins/#str.split",
 		"javascript/api/JSON.parse": "/javascript/api/JSON/#JSON.parse",
 		"cwe-89":                    "/weakness-catalogue/#cwe-89",
 		"mit":                       "/licences/#mit",

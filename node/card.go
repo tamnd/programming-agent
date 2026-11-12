@@ -125,19 +125,19 @@ func (c *Card) Heading() string {
 	return c.Local()
 }
 
-// Group is the part of the collection that holds the card. An api card is in the group of its module, class or package: str for str.split, os.path for os.path.join, std::vec::Vec for std::vec::Vec::push. A card of another kind is in one group, "".
+// Group is the part of the collection that holds the card. An api card is in the group of its module, package or namespace when it names one: builtins for str.split, java.util for java.util.List, std::vec for std::vec::Vec::push. A card with no module is in the group of its parent path: str for str.split, os.path for os.path.join. One page for each module keeps the number of pages small. A card of another kind is in one group, "".
 func (c *Card) Group() string {
 	if c.Kind != "api" {
 		return ""
+	}
+	if c.Module != "" {
+		return c.Module
 	}
 	p := c.Path
 	for _, sep := range []string{"::", ".", "/", "#"} {
 		if i := strings.LastIndex(p, sep); i > 0 {
 			return p[:i]
 		}
-	}
-	if c.Module != "" {
-		return c.Module
 	}
 	return "builtins"
 }
