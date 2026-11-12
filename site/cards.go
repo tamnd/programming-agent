@@ -169,6 +169,11 @@ func (b *builder) cardViews(ks []*node.Card) []CardView {
 		for _, s := range append(append(append(append([]string(nil), k.Parents...), k.Features...), k.Concepts...), k.Tasks...) {
 			v.Links = append(v.Links, b.link(s))
 		}
+		if node.OwnsReleases(k) {
+			if rs := b.cardsAt["/"+k.ID+"/releases/"]; len(rs) > 0 {
+				v.Links = append(v.Links, Link{Name: plural(len(rs), "release", "releases"), URL: "/" + k.ID + "/releases/"})
+			}
+		}
 		for _, s := range []string{k.Source.URL, k.URL, k.Doc.URL, k.Website, k.Wikipedia} {
 			if s != "" && !hasURL(v.Sources, s) {
 				v.Sources = append(v.Sources, Link{Name: hostOf(s), URL: s})
@@ -398,6 +403,9 @@ func (b *builder) ownerName(o string) string {
 	if n := b.c.BySlug[o]; n != nil {
 		return n.Name
 	}
+	if k := b.c.CardBySlug[o]; node.OwnsReleases(k) {
+		return k.Heading()
+	}
 	return humanize(o)
 }
 
@@ -407,6 +415,9 @@ func (b *builder) ownerCrumbs(o string) []Link {
 	}
 	if n := b.c.BySlug[o]; n != nil {
 		return []Link{{Name: n.Name, URL: "/" + n.Slug + "/"}}
+	}
+	if k := b.c.CardBySlug[o]; node.OwnsReleases(k) && b.cardHref[o] != "" {
+		return []Link{{Name: k.Heading(), URL: b.cardHref[o]}}
 	}
 	return nil
 }

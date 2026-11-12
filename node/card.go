@@ -96,6 +96,18 @@ var CardKinds = map[string]string{"diagnostic": "code", "proposal": "id", "api":
 // CardAreas are the pages that show the cards of the kinds that have no owner (spec 05.2 and 16.7). Most are sub-areas; languages/all, tools and libraries are collections with no area.
 var CardAreas = map[string]string{"weakness": "weakness-catalogue", "licence": "licences", "language": "languages/all", "tool": "tools", "library": "libraries", "format": "data-formats"}
 
+// OwnsReleases reports whether the card c can own release cards: a language, tool, library or format card with no owner, such as the card of Django or PostgreSQL. The releases of the product are then at /<id>/releases/.
+func OwnsReleases(c *Card) bool {
+	if c == nil || c.Owner != "" {
+		return false
+	}
+	switch c.Kind {
+	case "language", "tool", "library", "format":
+		return true
+	}
+	return false
+}
+
 // Local is the slug of the card inside its owner: the code of a diagnostic, the id of a proposal, an exercise, a weakness or a licence, the path of an api entry, the version of a release.
 func (c *Card) Local() string {
 	switch CardKinds[c.Kind] {
