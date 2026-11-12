@@ -114,7 +114,7 @@ func (b *builder) cardViews(ks []*node.Card) []CardView {
 	out := make([]CardView, 0, len(ks))
 	for _, k := range ks {
 		v := CardView{Anchor: k.Anchor(), Heading: k.Heading(), Local: k.Local(), Summary: k.Summary, Kind: k.Kind, Code: k.Signature}
-		v.Record = "/" + k.Slug() + ".json"
+		v.Record = k.Collection() + "cards.json"
 		v.Help = "/contribute/#promote-a-card"
 		add := func(key, val string, code bool) {
 			if val != "" {
@@ -263,7 +263,7 @@ func (b *builder) collectionTiles(u string, hue int) []Tile {
 	return out
 }
 
-// cardPages writes each collection page that no area page wrote, the index /<owner>/api/ of each owner, and the JSON record of each card.
+// cardPages writes each collection page that no area page wrote, the index /<owner>/api/ of each owner, and the file cards.json of each collection, which holds the JSON records of its cards.
 func (b *builder) cardPages() error {
 	urls := make([]string, 0, len(b.cardsAt))
 	for u := range b.cardsAt {
@@ -328,23 +328,25 @@ func (b *builder) cardPages() error {
 			return err
 		}
 	}
-	for _, k := range b.c.Cards {
-		if b.cardHref[k.Slug()] == "" {
-			continue
+	// One JSON file holds the records of all the cards of a collection, so that the number of files stays under the limit of the host.
+	for _, u := range urls {
+		recs := make([]map[string]any, 0, len(b.cardsAt[u]))
+		for _, k := range b.cardsAt[u] {
+			rec := map[string]any{}
+			for key, val := range k.Raw {
+				rec[key] = val
+			}
+			rec["url"] = b.opt.BaseURL + b.cardHref[k.Slug()]
+			if k.URL != "" {
+				rec["source_url"] = k.URL
+			}
+			recs = append(recs, rec)
 		}
-		rec := map[string]any{}
-		for key, val := range k.Raw {
-			rec[key] = val
-		}
-		rec["url"] = b.opt.BaseURL + b.cardHref[k.Slug()]
-		if k.URL != "" {
-			rec["source_url"] = k.URL
-		}
-		data, err := json.Marshal(rec)
+		data, err := json.Marshal(recs)
 		if err != nil {
 			return err
 		}
-		if err := b.write("/"+k.Slug()+".json", data); err != nil {
+		if err := b.write(u+"cards.json", data); err != nil {
 			return err
 		}
 	}
