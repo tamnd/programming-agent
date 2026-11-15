@@ -294,7 +294,8 @@ var cFlags = []string{"-Wall", "-Wextra", "-Wpedantic", "-Werror", "-g", "-fsani
 func clang(_ *Runner, dir string, _ *node.Node, im node.Impl) ([][]string, error) {
 	src := all(im, ".c")
 	args := append([]string{"cc", "-std=c2x"}, cFlags...)
-	args = append(append(args, src...), "-o", "test_main")
+	// Link libm after the sources, as prog run does. A test of code that uses math.h does not link without it on glibc.
+	args = append(append(args, src...), "-o", "test_main", "-lm")
 	return [][]string{args, {"./test_main"}}, nil
 }
 
