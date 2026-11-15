@@ -14,7 +14,7 @@ func TestClangLinksLibm(t *testing.T) {
 		t.Fatal(err)
 	}
 	build := steps[0]
-	if build[len(build)-5] != "test_m.c" || build[len(build)-1] != "-lm" {
+	if build[len(build)-4] != "test_m.c" || build[len(build)-1] != "-lm" {
 		t.Fatalf("want the sources, then -o test_main, then -lm; got %v", build)
 	}
 }
