@@ -259,3 +259,44 @@ func TestRecordPacks(t *testing.T) {
 		t.Error("the home page loads site.js with no hash")
 	}
 }
+
+func TestRetiredTagRedirect(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "corpus")
+	if err := os.CopyFS(root, os.DirFS("../testdata/corpus")); err != nil {
+		t.Fatal(err)
+	}
+	for f, body := range map[string]string{
+		"aliases.reg": "old-closures closures\n",
+		"retired.reg": "ZZ9RT1 old-closures merged into closures (7QKX2M)\nZZ9RT2\n",
+	} {
+		if err := os.WriteFile(filepath.Join(root, "registers", f), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	c, err := node.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := filepath.Join(t.TempDir(), "site")
+	if _, err := Build(c, Options{Out: out, Commit: "0123456789abcdef", Version: "test", Now: time.Date(2026, 11, 3, 0, 0, 0, 0, time.UTC)}); err != nil {
+		t.Fatal(err)
+	}
+	read := func(p string) string {
+		b, err := os.ReadFile(filepath.Join(out, p))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	if s := read("_redirects"); !strings.Contains(s, "/old-closures /closures/ 301\n") {
+		t.Error("_redirects does not send the old slug of aliases.reg to its node")
+	}
+	// The tag of retired.reg follows its old slug to the node that it moved to. A tag with no old slug goes nowhere.
+	moved := read("api/moved.json")
+	if !strings.Contains(moved, `"/t/ZZ9RT1":"/closures/"`) {
+		t.Error("api/moved.json does not send the retired tag to the node that its old slug moved to")
+	}
+	if strings.Contains(moved, "ZZ9RT2") {
+		t.Error("api/moved.json sends a retired tag that names no old slug")
+	}
+}
