@@ -98,6 +98,8 @@ type Corpus struct {
 	Tags     []Tag
 	// OldSlugs maps each old slug of registers/aliases.reg to the slug it moved to.
 	OldSlugs map[string]string
+	// RetiredTags maps each tag of registers/retired.reg to the old slug of its node, or to "" when the line names no slug.
+	RetiredTags map[string]string
 	// Errors are the node directories that could not be read. Package check reports them as T01.
 	Errors []error
 	// Cards are the rows of the card registers under cards/, sorted by slug (spec 04.1).
@@ -194,6 +196,9 @@ func Load(root string) (*Corpus, error) {
 	}
 	c.Tags = tags
 	if c.OldSlugs, err = ReadAliases(filepath.Join(root, "registers", "aliases.reg")); err != nil {
+		return nil, err
+	}
+	if c.RetiredTags, err = ReadRetired(filepath.Join(root, "registers", "retired.reg")); err != nil {
 		return nil, err
 	}
 
@@ -385,6 +390,33 @@ func ReadAliases(path string) (map[string]string, error) {
 			return nil, fmt.Errorf("%s:%d: a line needs an old slug and a new slug", path, line)
 		}
 		out[fs[0]] = fs[1]
+	}
+	return out, s.Err()
+}
+
+// ReadRetired reads registers/retired.reg. Each line is a tag that no node holds any more, then the old slug of its node, then a note.
+func ReadRetired(path string) (map[string]string, error) {
+	out := map[string]string{}
+	f, err := os.Open(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return out, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		t := strings.TrimSpace(s.Text())
+		if t == "" || strings.HasPrefix(t, "#") {
+			continue
+		}
+		fs := strings.Fields(t)
+		if len(fs) > 1 {
+			out[fs[0]] = fs[1]
+		} else {
+			out[fs[0]] = ""
+		}
 	}
 	return out, s.Err()
 }

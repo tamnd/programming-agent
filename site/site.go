@@ -714,6 +714,12 @@ func (b *builder) redirects() (string, map[string]string, map[string]map[string]
 			moved["/t/"+n.Tag] = "/" + n.Slug + "/"
 		}
 	}
+	// A retired tag goes to the node that its old slug moved to, so an old /t/ link still finds the text (spec 04.2).
+	for tag, old := range b.c.RetiredTags {
+		if to := b.c.OldSlugs[old]; to != "" && b.c.BySlug[to] != nil && moved["/t/"+tag] == "" {
+			moved["/t/"+tag] = "/" + to + "/"
+		}
+	}
 	// A card has no page. Its URL and its tag go to its anchor on the collection page (spec 16.7).
 	for _, k := range b.c.Cards {
 		if to := b.cardHref[k.Slug()]; to != "" {
